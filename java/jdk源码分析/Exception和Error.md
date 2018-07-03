@@ -8,7 +8,7 @@
 2. RuntimeException继承自Exception.
 3. Error和RuntimeException及其子类称称为未检查的异常(Unchecked Exception）,其他异常称为受检查异常(Checked Exception). 
 
-![exception和Error](../image/exception和Error.jpg)
+![exception和Error](/image/exception和Error.jpg)
 
 <br>
 
