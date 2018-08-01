@@ -1,6 +1,6 @@
 # HSF的原理分析
 
-参考博客：https://blog.csdn.net/qq_16681169/article/details/72512819
+
 
 <br><br>
 
@@ -71,6 +71,8 @@ Netty：上面三层会将一次服务调用或者服务返回包装成一个报
 第一条线路相当于consumer进行服务调用的过程，首先经过proxy层，将请求经过代理类包装出去；然后是Remoting层进行协议的包装，最后io层发送出去。
 第二条线路相当于provider将结果返回后解析的过程，与上一流程刚好相反。
 右边的provider两条调用流程相信大家都能按照上面的过程理解，就不一一讲解了。
+
+参考博客：https://blog.csdn.net/qq_16681169/article/details/72512819
 
 
 
