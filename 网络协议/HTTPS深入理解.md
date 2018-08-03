@@ -1,6 +1,6 @@
 # HTTPS深入学习
 
-说到Https 大家想到得是Http升级版，保证http以加密方式进行传输。
+说到Https 大家想到得是Http升级版，保证http以加密方式进行传输。大家需要[深入学习HTTP](./HTTP深入学习.md)
 
 <br>
 
