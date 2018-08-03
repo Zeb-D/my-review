@@ -370,7 +370,9 @@ TIME_WAIT 大家可能对这单词可能有点迷糊，这是socket连接不同�
 
 还有一些针对于HTTP一些安全操作，如基本认证机制、摘要认证等，这里偏向于[HTTPS](./HTTPS深入理解.md);
 
+<br>
 
+本文章纯手动，请转载注明：https://github.com/Zeb-D/my-review
 
 
 
