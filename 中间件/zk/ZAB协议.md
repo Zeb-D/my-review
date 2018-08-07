@@ -1,4 +1,6 @@
-本文章来源于：https://github.com/Zeb-D/my-review ，请star 强力支持，你的支持，就是我的动力。<br>
+本文章来源于：https://github.com/Zeb-D/my-review ，请star 强力支持，你的支持，就是我的动力。
+
+<br>
 
 ##ZAB协议介绍
 
@@ -140,7 +142,7 @@ pk完毕后，如果本机器投票被pk掉，则更新投票信息为对方投�
 
 1.  通信初始化
 
-   leader会创建一个ServerSocket，接收follower的连接，leader会为每一个连接会用一个LearnerHandler线程来进行服务
+   leader会创建一个ServerSocket，接收follower的连接，leader会为每一个连接会用一个LeaderHandler线程来进行服务
 
 2.  重新为peerEpoch选举出一个新的peerEpoch
 
