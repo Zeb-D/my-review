@@ -146,6 +146,8 @@ HTTP2还有一些比较重要的改动：
 - 头部压缩
 - 服务器推送
 
+非常详细请[HTTP2.0 阅读](https://juejin.im/post/5b88a4f56fb9a01a0b31a67e)
+
 在这里不讲[HTTPS协议](./HTTPS深入理解.md)
 
 <br>
