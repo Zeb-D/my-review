@@ -857,11 +857,11 @@ ThreadD会从原阻塞处继续向下执行，并在下一次自旋中获取到�
 
 ##### ThreadD调用unlockWrite释放写锁
 
-ThreadD释放写锁的过程和[步骤7](./StampedLock 深入分析.md#ThreadA调用unlockWrite释放写锁)完全相同，会调用**unlockWrite**唤醒队首结点（ThreadE）。
+ThreadD释放写锁的过程和(ThreadA调用unlockWrite释放写锁)完全相同，会调用**unlockWrite**唤醒队首结点（ThreadE）。
 
 ![clipboard.png](https://segmentfault.com/img/bVbeuKu?w=487&h=288)
 
-ThreadE被唤醒后会从原阻塞处继续向下执行，但由于ThreadE是个读结点，所以同时会唤醒cowait栈中的所有读结点，过程和[步骤8](./StampedLock 深入分析.md#ThreadB被唤醒后继续向下执行)完全一样。最终，等待队列的结构如下：
+ThreadE被唤醒后会从原阻塞处继续向下执行，但由于ThreadE是个读结点，所以同时会唤醒cowait栈中的所有读结点，过程和(ThreadB被唤醒后继续向下执行)完全一样。最终，等待队列的结构如下：
 ![clipboard.png](https://segmentfault.com/img/bVbeuKP?w=215&h=258)
 
 至此，全部执行完成。
