@@ -5,7 +5,10 @@
 
 
 
-
+[![知识共享协议（CC协议）](https://img.shields.io/badge/License-Creative%20Commons-DC3D24.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh)
+[![GitHub stars](https://img.shields.io/github/stars/Zeb-D/my-review.svg?style=flat&label=Star)](https://github.com/Zeb-D/my-review/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/Zeb-D/my-review.svg?style=flat&label=Fork)](https://github.com/Zeb-D/my-review/fork)
+[![GitHub watchers](https://img.shields.io/github/watchers/Zeb-D/my-review.svg?style=flat&label=Watch)](https://github.com/Zeb-D/my-review/watchers)
 
 
 ------
