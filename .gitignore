@@ -17,4 +17,4 @@ _book
 .idea/
 .settings/
 .project
-
+.DS_Store
