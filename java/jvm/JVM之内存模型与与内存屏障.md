@@ -172,6 +172,14 @@ StoreLoad Barriers是一个“全能型”的屏障，它同时具有其他三�
 
 <br>
 
+### as-if-serial
+
+不管怎么重排序，单线程程序的执行结果不能被改变。as-if-serial 语义使得单线程程序员无需担心重排序的干扰。
+
+重排序可能会改变多线程程序的执行结果，如下图所示
+
+![img](https://user-gold-cdn.xitu.io/2018/12/25/167e427abf66c932?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+
 <br>
 
 ### happens-before
@@ -192,6 +200,24 @@ happens-before与JMM的关系如下图所示：
 ![img](http://ifeve.com/wp-content/uploads/2013/01/552.png)
 
 如上图所示，一个happens-before规则通常对应于多个编译器和处理器重排序规则。对于java程序员来说，happens-before规则简单易懂，它避免java程序员为了理解JMM提供的内存可见性保证而去学习复杂的重排序规则以及这些规则的具体实现。
+
+JSR-133 中对 **happens-before 关系定义**如下：
+
+1. 如果一个操作 happens-before 另一个操作，那么第一个操作的执行结果将对第二个操作可见，且第一个操作的执行顺序排在第二个操作之前。
+2. 两个操作中间存在 happens-before 关系，如果重排序之后的执行结果与按照 happends-before 执行结果一致，JMM 允许这种重排序。
+
+happens-before 与 as-if-serial 相比，后者保证了单线程内程序的执行结果不被改变；前者保证正确同步的多线程程序的执行结果不被改变。
+
+JSR-133中定义了如下的 happens-before 规则：
+
+- 单一线程原则：在一个线程内，程序前面的操作先于后面的操作。
+- 监视器锁规则：一个unlock操作先于后面对同一个锁的lock操作发生。
+- volatile变量规则：对一个 volatile 变量的写操作先行发生于后面对这个变量的读操作，也就是说读取的值肯定是最新的。
+- 线程启动规则：Thread对象的start()方法调用先行发生于此线程的每一个动作。
+- 线程加入规则：Thread 对象的结束先行发生于 join() 方法返回。
+- 线程中断规则：对线程 interrupt() 方法的调用先行发生于被中断线程的代码检测到中断事件的发生，可以通过 interrupted() 方法检测到是否有中断发生。
+- 对象终结规则：一个对象的初始化完成（构造函数执行结束）先行发生于它的 finalize() 方法的开始。
+- 传递性：如果操作 A 先行发生于操作 B，操作 B 先行发生于操作 C，那么操作 A 先行发生于操作 C。
 
 <br>
 
