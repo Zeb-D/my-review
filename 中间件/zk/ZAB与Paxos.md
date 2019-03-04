@@ -1,8 +1,14 @@
+本文章来源于：<https://github.com/Zeb-D/my-review> ，请star 强力支持，你的支持，就是我的动力。
 
+[TOC]
 
+------
 
+### 背景
 
+学习了一些分布式理论，特别是一些围绕着[cap理论](../../分布式/分布式系统的BASE理论.md)的三大特性的算法，重点学习了zk上的[ZAB协议]()
 
+和少数服从多数算法[PAXOS算法](../../分布式/什么是PAXOS.md),当然还有其它算法不在这里讨论如raft，包括数据一致性算法如[Quorum 和Clock 算法](../../分布式/集群内数据一致性的算法.md) 接下来初步总结下ZAB和Paxos学习感受：
 
 ### ZAB 和 Paxos
 
@@ -62,11 +68,7 @@ Zab不需要这种解决方法。Zab副本可以同时就多个状态更新的�
 
 ![Fig. 5. Zab protocol summary](https://ai2-s2-public.s3.amazonaws.com/figures/2017-08-08/b02c6b00bd5dbdbd951fddb00b906c82fa80f0b3/7-Figure5-1.png)
 
-
-
-
-
-
+<br>
 
 
 

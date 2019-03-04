@@ -1,4 +1,4 @@
-# Solr vs. Elasticsearch —>谁是开源搜索引擎王者
+# Solr vs. Elasticsearch 
 
 <br><br>
 
