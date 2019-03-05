@@ -1,10 +1,10 @@
+本文章来源于：<https://github.com/Zeb-D/my-review> ，请star 强力支持，你的支持，就是我的动力。
 
+[TOC]
+
+------
 
 ### Mysql之MYISAM、INODB的区别
-
-参考链接：https://blog.csdn.net/xuehuagongzi000/article/details/71246630
-
-​		   https://blog.csdn.net/gaohuanjie/article/details/50944782
 
 
 
@@ -67,6 +67,16 @@
 
 ### MyISAM和InnoDB存储引擎的比较
 
+> MyIASM和Innodb两种引擎所使用的索引的数据结构是什么？
+
+> 答案:都是B+树!
+
+MyIASM引擎，B+树的数据结构中存储的内容实际上是实际数据的地址值。也就是说它的索引和实际数据是分开的，**只不过使用索引指向了实际数据。这种索引的模式被称为非聚集索引。**
+
+Innodb引擎的索引的数据结构也是B+树，**只不过数据结构中存储的都是实际的数据，这种索引有被称为聚集索引**。
+
+
+
 ##### MyISAM
 
 MyISAM是基于传统的ISAM类型，支持全文搜索，但不是事务安全的，而且不支持外键。每张MyISAM表存放在三个文件中：frm 文件存放表格定义；数据文件是MYD (MYData)；索引文件是MYI (MYIndex)。
@@ -77,7 +87,7 @@ InnoDB是事务型引擎，支持回滚、崩溃恢复能力、多版本并发�
 
 
 
-#### 主要区别：
+### 主要区别：
 
 - MyISAM是非事务安全型的，而InnoDB是事务安全型的。
 - MyISAM锁的粒度是表级，而InnoDB支持行级锁定。
@@ -86,7 +96,7 @@ InnoDB是事务型引擎，支持回滚、崩溃恢复能力、多版本并发�
 - MyISAM表是保存成文件的形式，在跨平台的数据转移中使用MyISAM存储会省去不少的麻烦。
 - InnoDB表比MyISAM表更安全，可以在保证数据不会丢失的情况下，切换非事务表到事务表（alter table tablename type=innodb）。
 
-#### 应用场景：
+### 应用场景：
 
 - MyISAM管理非事务表。它提供高速存储和检索，以及全文搜索能力。如果应用中需要执行大量的SELECT查询，那么MyISAM是更好的选择。
 - InnoDB用于事务处理应用程序，具有众多特性，包括ACID事务支持。如果应用中需要执行大量的INSERT或UPDATE操作，则应该使用InnoDB，这样可以提高多用户并发操作的性能。
@@ -94,7 +104,7 @@ InnoDB是事务型引擎，支持回滚、崩溃恢复能力、多版本并发�
 
 
 
-#### 常用命令：
+### 常用命令：
 
 （1）查看表的存储类型（三种）：
 
