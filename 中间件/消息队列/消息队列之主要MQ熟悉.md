@@ -1,4 +1,4 @@
-## [分布式之消息队列复习精讲](https://www.cnblogs.com/rjzheng/p/8994962.html)
+## 分布式之消息队列复习
 
 [TOC]
 
