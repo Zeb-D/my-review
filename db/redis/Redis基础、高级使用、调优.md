@@ -3,7 +3,7 @@
 本文将从Redis的基本特性入手，通过讲述Redis的数据结构和主要命令对Redis的基本能力进行直观介绍。之后概览Redis提供的高级能力，并在部署、维护、性能调优等多个方面进行更深入的介绍和指导。
 本文适合使用Redis的普通开发人员，以及对Redis进行选型、架构设计和性能调优的架构设计人员。
 
-## 目录
+### 目录
 
 - 概述
 - Redis的数据结构和相关常用命令
@@ -15,7 +15,7 @@
 - 主从复制与集群分片
 - Redis Java客户端的选择
 
-## 概述
+### 概述
 
 Redis是一个开源的，基于内存的结构化数据存储媒介，可以作为数据库、缓存服务或消息服务使用。
 Redis支持多种数据结构，包括字符串、哈希表、链表、集合、有序集合、位图、Hyperloglogs等。
@@ -27,11 +27,11 @@ Redis的主要功能都基于单线程模型实现，也就是说Redis使用一�
 - Redis的速度非常快（因为使用非阻塞式IO，且大部分命令的算法时间复杂度都是O(1))
 - 使用高耗时的Redis命令是很危险的，会占用唯一的一个线程的大量处理时间，导致所有的请求都被拖慢。（例如时间复杂度为O(N)的KEYS命令，严格禁止在生产环境中使用）
 
-## Redis的数据结构和相关常用命令
+### Redis的数据结构和相关常用命令
 
 本节中将介绍Redis支持的主要数据结构，以及相关的常用Redis命令。本节只对Redis命令进行扼要的介绍，且只列出了较常用的命令。如果想要了解完整的Redis命令集，或了解某个命令的详细使用方法，请参考官方文档：https://redis.io/commands
 
-### Key
+#### Key
 
 Redis采用Key-Value型的基本数据结构，任何二进制序列都可以作为Redis的Key使用（例如普通的字符串或一张JPEG图片）
 关于Key的一些注意事项：
@@ -41,7 +41,7 @@ Redis采用Key-Value型的基本数据结构，任何二进制序列都可以作
 - 最好使用统一的规范来设计Key，比如"object-type:id:attr"，以这一规范设计出的Key可能是"user:1000"或"comment:1234:reply-to"
 - Redis允许的最大Key长度是512MB（对Value的长度限制也是512MB）
 
-### String
+#### String
 
 String是Redis的基础数据类型，Redis没有Int、Float、Boolean等数据类型的概念，所有的基本类型在Redis中都以String体现。
 
@@ -113,7 +113,7 @@ INCRBY sequence 100
 
 当多个客户端同时向Redis申请自增序列时，Redis能够确保每个客户端得到的序列值或序列范围都是全局唯一的，绝对不会出现不同客户端得到了重复的序列值的情况。
 
-### List
+#### List
 
 Redis的List是链表型的数据结构，可以使用LPUSH/RPUSH/LPOP/RPOP等命令在List的两端执行插入元素和弹出元素的操作。虽然List也支持在特定index上插入和读取元素的功能，但其时间复杂度较高（O(N)），应小心使用。
 
@@ -139,7 +139,7 @@ Redis的List是链表型的数据结构，可以使用LPUSH/RPUSH/LPOP/RPOP等�
 
 为了更好支持队列的特性，Redis还提供了一系列阻塞式的操作命令，如BLPOP/BRPOP等，能够实现类似于BlockingQueue的能力，即在List为空时，阻塞该连接，直到List中有对象可以出队时再返回。针对阻塞类的命令，此处不做详细探讨，请参考官方文档（https://redis.io/topics/data-types-intro） 中"Blocking operations on lists"一节。
 
-### Hash
+#### Hash
 
 Hash即哈希表，Redis的Hash和传统的哈希表一样，是一种field-value型的数据结构，可以理解成将HashMap搬入Redis。
 Hash非常适合用于表现对象类型的数据，用Hash中的field对应对象的field即可。
@@ -166,7 +166,7 @@ Hash的优点包括：
 
 上述三个命令都会对Hash进行完整遍历，Hash中的field数量与命令的耗时线性相关，对于尺寸不可预知的Hash，应严格避免使用上面三个命令，而改为使用HSCAN命令进行游标式的遍历，具体请见 https://redis.io/commands/scan
 
-### Set
+#### Set
 
 Redis Set是无序的，不可重复的String集合。
 
@@ -189,7 +189,7 @@ Redis Set是无序的，不可重复的String集合。
 
 上述几个命令涉及的计算量大，应谨慎使用，特别是在参与计算的Set尺寸不可知的情况下，应严格避免使用。可以考虑通过SSCAN命令遍历获取相关Set的全部member（具体请见 https://redis.io/commands/scan ），如果需要做并集/交集/差集计算，可以在客户端进行，或在不服务实时查询请求的Slave上进行。
 
-### Sorted Set
+#### Sorted Set
 
 Redis Sorted Set是有序的、不可重复的String集合。Sorted Set中的每个元素都需要指派一个分数(score)，Sorted Set会根据score对元素进行升序排序。如果多个member拥有相同的score，则以字典序进行升序排序。
 
@@ -213,7 +213,7 @@ Sorted Set的主要命令：
 
 上述几个命令，应尽量避免传递[0 -1]或[-inf +inf]这样的参数，来对Sorted Set做一次性的完整遍历，特别是在Sorted Set的尺寸不可预知的情况下。可以通过ZSCAN命令来进行游标式的遍历（具体请见 https://redis.io/commands/scan ），或通过LIMIT参数来限制返回member的数量（适用于ZRANGEBYSCORE和ZREVRANGEBYSCORE命令），以实现游标式的遍历。
 
-### Bitmap和HyperLogLog
+#### Bitmap和HyperLogLog
 
 Redis的这两种数据结构相较之前的并不常用，在本文中只做简要介绍，如想要详细了解这两种数据结构与其相关的命令，请参考官方文档https://redis.io/topics/data-types-intro 中的相关章节
 
@@ -221,7 +221,7 @@ Bitmap在Redis中不是一种实际的数据类型，而是一种将String作为
 
 HyperLogLogs是一种主要用于数量统计的数据结构，它和Set类似，维护一个不可重复的String集合，但是HyperLogLogs并不维护具体的member内容，只维护member的个数。也就是说，HyperLogLogs只能用于计算一个集合中不重复的元素数量，所以它比Set要节省很多内存空间。
 
-### 其他常用命令
+#### 其他常用命令
 
 - **EXISTS**：判断指定的key是否存在，返回1代表存在，0代表不存在，时间复杂度O(1)
 - **DEL**：删除指定的key及其对应的value，时间复杂度O(N)，N为删除的key数量
@@ -235,11 +235,11 @@ HyperLogLogs是一种主要用于数量统计的数据结构，它和Set类似�
 
 
 
-## 数据持久化
+### 数据持久化
 
 Redis提供了将数据定期自动持久化至硬盘的能力，包括RDB和AOF两种方案，两种方案分别有其长处和短板，可以配合起来同时运行，确保数据的稳定性。
 
-### 必须使用数据持久化吗？
+#### 必须使用数据持久化吗？
 
 Redis的数据持久化机制是可以关闭的。如果你只把Redis作为缓存服务使用，Redis中存储的所有数据都不是该数据的主体而仅仅是同步过来的备份，那么可以关闭Redis的数据持久化机制。
 但通常来说，仍然建议至少开启RDB方式的数据持久化，因为：
@@ -250,7 +250,7 @@ Redis的数据持久化机制是可以关闭的。如果你只把Redis作为缓�
 
 
 
-### RDB
+#### RDB
 
 采用RDB持久方式，Redis会定期保存数据快照至一个rbd文件中，并在启动时自动加载rdb文件，恢复之前保存的数据。可以在配置文件中配置Redis进行快照保存的时机：
 
@@ -287,7 +287,7 @@ save 60 10000
 - 快照是定期生成的，所以在Redis crash时或多或少会丢失一部分数据。
 - 如果数据集非常大且CPU不够强（比如单核CPU），Redis在fork子进程时可能会消耗相对较长的时间（长至1秒），影响这期间的客户端请求。
 
-### AOF
+#### AOF
 
 采用AOF持久方式时，Redis会把每一个写请求都记录在一个日志文件里。在Redis重启时，会把AOF文件中记录的所有写操作顺序执行一遍，确保数据恢复到最新。
 
@@ -325,9 +325,11 @@ auto-aof-rewrite-percentage 100auto-aof-rewrite-min-size 64mb
 - 性能消耗比RDB高
 - 数据恢复速度比RDB慢
 
-## 内存管理与数据淘汰机制
 
-### 最大内存设置
+
+### 内存管理与数据淘汰机制
+
+#### 最大内存设置
 
 默认情况下，在32位OS中，Redis最大使用3GB的内存，在64位OS中则没有限制。
 
@@ -348,7 +350,7 @@ maxmemory 100mb
 
 - 如果采用了Redis的主从同步，主节点向从节点同步数据时，会占用掉一部分内存空间，如果maxmemory过于接近主机的可用内存，导致数据同步时内存不足。所以设置的maxmemory不要过于接近主机可用的内存，留出一部分预留用作主从同步。
 
-### 数据淘汰机制
+#### 数据淘汰机制
 
 Redis提供了5种数据淘汰策略：
 
@@ -368,9 +370,9 @@ Redis提供了5种数据淘汰策略：
 maxmemory-policy volatile-lru   #默认是noeviction，即不进行数据淘汰
 ```
 
-## Pipelining
-
 ### Pipelining
+
+#### Pipelining
 
 Redis提供许多批量操作的命令，如MSET/MGET/HMSET/HMGET等等，这些命令存在的意义是减少维护网络连接和传输数据所消耗的资源和时间。
 例如连续使用5次SET命令设置5个不同的key，比起使用一次MSET命令设置5个不同的key，效果是一样的，但前者会消耗更多的RTT(Round Trip Time)时长，永远应优先使用后者。
@@ -395,15 +397,46 @@ $ (printf "PING\r\nPING\r\nPING\r\n"; sleep 1) | nc localhost 6379
 
 大部分的Redis客户端都对Pipelining提供支持，所以开发者通常并不需要自己手工拼装命令列表。
 
-##### Pipelining的局限性
+#### Pipelining的局限性
 
 Pipelining只能用于执行**连续且无相关性**的命令，当某个命令的生成需要依赖于前一个命令的返回时，就无法使用Pipelining了。
 
 通过Scripting功能，可以规避这一局限性
 
-## 事务与Scripting
 
-Pipelining能够让Redis在一次交互中处理多条命令，然而在一些场景下，我们可能需要在此基础上确保这一组命令是连续执行的。
+
+### 事务与Scripting
+
+Redis 提供 `watch`、`multi`、`exec` 等方法实现乐观锁事务。使用事务的流程如下：
+
+1. watch key1 key2
+2. multi 开启事务
+3. set key1 value1、set key2 value2，将指令入队。
+4. exec，执行指令。
+
+如果 multi ~ exec 之间 key1/key2 被其他客户端修改过，exec 时会返回 nil， set key1 value1、set key2 value2 均不会执行。 Redis 会保存一个 watch_keys 字典，结构为： client -> keys、is_dirty。Redis 在处理每一个会修改数据的命令时，会检查 watch_keys 是否存在该 key，如果有，则修改 is_dirty 为 true。
+
+执行事务的客户端在执行 exec 时，会检查 is_dirty 字段，如果发现为 false，所有的积累的指令会直接丢弃不执行。
+
+#### Lua
+
+Redis 提供了对 Lua 脚本的支持，原子性执行一系列指令，并可以写代码做逻辑判断。 例如需要大量插入数据的场景：
+
+```
+for i=1,10000000,1 do
+    local num = math.random(1000000,999999999);
+    redis.call("set",num,i)
+end
+复制代码
+```
+
+执行一千万条命令在本机大概用了 12 秒，QPS 83w。 Redis 在执行 Lua 脚本时是单线程，无法处理其他请求，这也是 Redis 原子性的原因。
+
+
+
+#### Pipelining
+
+能够让Redis在一次交互中处理多条命令，然而在一些场景下，我们可能需要在此基础上确保这一组命令是连续执行的。
 
 比如获取当前累计的PV数并将其清0
 
@@ -437,7 +470,7 @@ Redis在接收到MULTI命令后便会开启一个事务，这之后的所有读�
 如果一个事务中的命令出现了语法错误，大部分客户端驱动会返回错误，2.6.5版本以上的Redis也会在执行EXEC时检查队列中的命令是否存在语法错误，如果存在，则会自动放弃事务并返回错误。
 但如果一个事务中的命令有非语法类的错误（比如对String执行HSET操作），无论客户端驱动还是Redis都无法在真正执行这条命令之前发现，所以事务中的所有命令仍然会被依次执行。在这种情况下，会出现一个事务中部分命令成功部分命令失败的情况，然而与RDBMS不同，Redis不提供事务回滚的功能，所以只能通过其他方法进行数据的回滚。
 
-### 通过事务实现CAS
+#### 通过事务实现CAS
 
 Redis提供了WATCH命令与事务搭配使用，实现CAS乐观锁的机制。
 
@@ -463,7 +496,7 @@ if(exec(HGET stock:1001 state) == "in stock") {
 
 WATCH的机制是：在事务EXEC命令执行时，Redis会检查被WATCH的key，只有被WATCH的key从WATCH起始时至今没有发生过变更，EXEC才会被执行。如果WATCH的key在WATCH命令到EXEC命令之间发生过变化，则EXEC命令会返回失败。
 
-### Scripting
+#### Scripting
 
 通过EVAL与EVALSHA命令，可以让Redis执行LUA脚本。这就类似于RDBMS的存储过程一样，可以把客户端与Redis之间密集的读/写交互放在服务端进行，避免过多的数据交互，提升性能。
 
@@ -471,7 +504,9 @@ Scripting功能是作为事务功能的替代者诞生的，事务提供的所�
 
 关于Scripting的具体使用，本文不做详细介绍，请参考官方文档 https://redis.io/commands/eval
 
-## Redis性能调优
+
+
+### Redis性能调优
 
 尽管Redis是一个非常快速的内存数据存储媒介，也并不代表Redis不会产生性能问题。
 前文中提到过，Redis采用单线程模型，所有的命令都是由一个线程串行执行的，所以当某个命令执行耗时较长时，会拖慢其后的所有命令，这使得Redis对每个任务的执行效率更加敏感。
@@ -494,7 +529,7 @@ Scripting功能是作为事务功能的替代者诞生的，事务提供的所�
 
 - 考虑引入读写分离机制
 
-### 长耗时命令
+#### 长耗时命令
 
 Redis绝大多数读写命令的时间复杂度都在O(1)到O(N)之间，在文本和官方文档中均对每个命令的时间复杂度有说明。
 
@@ -521,12 +556,12 @@ slowlog-max-len xxx  #Slow Log的长度，即最大纪录多少条Slow Log
 使用**SLOWLOG GET [number]**命令，可以输出最近进入Slow Log的number条命令。
 使用**SLOWLOG RESET**命令，可以重置Slow Log
 
-### 网络引发的延迟
+#### 网络引发的延迟
 
 - 尽可能使用长连接或连接池，避免频繁创建销毁连接
 - 客户端进行的批量数据操作，应使用Pipeline特性在一次交互中完成。具体请参照本文的Pipelining章节
 
-### 数据持久化引发的延迟
+#### 数据持久化引发的延迟
 
 Redis的数据持久化工作本身就会带来延迟，需要根据数据的安全级别和性能要求制定合理的持久化策略：
 
@@ -540,27 +575,31 @@ Redis的数据持久化工作本身就会带来延迟，需要根据数据的安
 >
 > 可以通过**INFO**命令返回的latest_fork_usec字段查看上一次fork操作的耗时（微秒）
 
-### Swap引发的延迟
+#### Swap引发的延迟
 
 当Linux将Redis所用的内存分页移至swap空间时，将会阻塞Redis进程，导致Redis出现不正常的延迟。Swap通常在物理内存不足或一些进程在进行大量I/O操作时发生，应尽可能避免上述两种情况的出现。
 
 /proc/<pid>/smaps文件中会保存进程的swap记录，通过查看这个文件，能够判断Redis的延迟是否由Swap产生。如果这个文件中记录了较大的Swap size，则说明延迟很有可能是Swap造成的。
 
-### 数据淘汰引发的延迟
+#### 数据淘汰引发的延迟
 
 当同一秒内有大量key过期时，也会引发Redis的延迟。在使用时应尽量将key的失效时间错开。
 
-### 引入读写分离机制
+#### 引入读写分离机制
 
 Redis的主从复制能力可以实现一主多从的多节点架构，在这一架构下，主节点接收所有写请求，并将数据同步给多个从节点。
 在这一基础上，我们可以让从节点提供对实时性要求不高的读请求服务，以减小主节点的压力。
 尤其是针对一些使用了长耗时命令的统计类任务，完全可以指定在一个或多个从节点上执行，避免这些长耗时命令影响其他请求的响应。
 
+还有一些[线上redis集群运维相关知识](./redis之集群运维总结.md)。
+
 关于读写分离的具体说明，请参见后续章节
 
-## 主从复制与集群分片
 
-### 主从复制
+
+### 主从复制与集群分片
+
+#### 主从复制
 
 Redis支持一主多从的主从复制架构。一个Master实例负责处理所有的写请求，Master将写操作同步至所有Slave。
 借助Redis的主从复制，可以实现读写分离和高可用：
@@ -594,6 +633,8 @@ sentinel parallel-syncs mymaster 1  #如果有多个Slave，可以通过此配�
 ```
 
 另外需要注意的是，Redis Sentinel实现的自动failover不是在同一个IP和端口上完成的，也就是说自动failover产生的新Master提供服务的IP和端口与之前的Master是不一样的，所以要实现HA，还要求客户端必须支持Sentinel，能够与Sentinel交互获得新Master的信息才行。
+
+
 
 ### 集群分片
 
@@ -660,7 +701,9 @@ Redis Cluster中共有16384个hash slot，Redis会计算每个key的CRC16，将�
 
 综合上面几点考虑，如果单台主机的可用物理内存完全足以支撑对Redis的容量需求，且Redis面临的并发写压力距离Benchmark值还尚有距离，建议采用主从复制的架构，可以省去很多不必要的麻烦。同时，如果应用中大量使用pipelining和事务，也建议尽可能选择主从复制架构，可以减少设计和开发时的复杂度。
 
-## Redis Java客户端的选择
+
+
+### Redis Java客户端的选择
 
 Redis的Java客户端很多，官方推荐的有三种：Jedis、Redisson和lettuce。
 
