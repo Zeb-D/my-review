@@ -37,10 +37,21 @@
 - --[消息队列](https://github.com/Zeb-D/my-review/blob/master/中间件/消息队列)
 - [分布式](https://github.com/Zeb-D/my-review/blob/master/分布式)
 - [网络协议](https://github.com/Zeb-D/my-review/blob/master/网络协议) 本应该放到linux的，但放到这里
+- [middleware-design](https://github.com/Zeb-D/my-review/blob/master/middleware-design) 这里将是带领大家实现有价值的中间件或者组件
 
 <br>
 
 ### 详细引导
+
+#### 打开方式引导
+
+文档均采用`Typora`编辑，故大多数文章使用该编辑器打开，是能体现出目录文档图（对应快捷键为`[TOC]`所以页面见到这关键字也不要怕为什么）
+
+#### Chrome 浏览指导
+
+当前有 chrome 插件支持GitHub ，有个目录导航栏，该插件名称大概是`Octotree`(是不是学习效率又提高了...)
+
+#### 文章导航
 
 这里可能不太会时常更新，主要有点多，完成率为![完成率](http://progressed.io/bar/001)
 
