@@ -1,6 +1,12 @@
 本文章来源于：<https://github.com/Zeb-D/my-review> ，请star 强力支持，你的支持，就是我的动力。
 
-# Java7/8 下 HashMap 与 ConcurrentHashMap 
+[TOC]
+
+------
+
+
+
+### Java7/8 下 HashMap 与 ConcurrentHashMap 
 
 网上关于 HashMap 和 ConcurrentHashMap 的文章确实不少，不过有很多没那么全面，自己也写一篇，把细节说清楚说透，尤其像 Java8 中的 ConcurrentHashMap。
 
@@ -8,7 +14,7 @@ Java7/8 中的 HashMap 和 ConcurrentHashMap 全解析，阅读建议：四节�
 
 **阅读准备**：本文分析的是源码，所以至少读者要熟悉它们的接口使用，同时，对于并发，读者至少要知道 CAS、ReentrantLock、UNSAFE 操作这几个基本的知识，文中不会对这些知识进行介绍。Java8 用到了红黑树，不过本文不会进行展开，感兴趣的读者请自行查找相关资料。
 
-## Java7 HashMap
+### Java7 HashMap
 
 HashMap 是最简单的，一来我们非常熟悉，二来就是它不支持并发操作，所以源码也非常简单。
 
@@ -24,7 +30,7 @@ HashMap 的结构图：
 - loadFactor：负载因子，默认为 0.75。
 - threshold：扩容的阈值，等于 capacity * loadFactor
 
-### put 过程分析
+#### put 过程分析
 
 ```java
 public V put(K key, V value) {
@@ -58,7 +64,7 @@ public V put(K key, V value) {
 }
 ```
 
-###数组初始化
+####数组初始化
 
 在第一个元素插入 HashMap 的时候做一次数组的初始化，就是先确定初始的数组大小，并计算数组扩容的阈值。
 
@@ -77,7 +83,7 @@ private void inflateTable(int toSize) {
 
 这里有一个将数组大小保持为 2 的 n 次方的做法，Java7 和 Java8 的 HashMap 和 ConcurrentHashMap 都有相应的要求，只不过实现的代码稍微有些不同，后面再看到的时候就知道了。
 
-###计算具体数组位置
+####计算具体数组位置
 
 这个简单，我们自己也能 YY 一个：使用 key 的 hash 值对数组长度进行取模就可以了。
 
@@ -90,7 +96,7 @@ static int indexFor(int hash, int length) {
 
 这个方法很简单，简单说就是取 hash 值的低 n 位。如在数组长度为 32 的时候，其实取的就是 key 的 hash 值的低 5 位，作为它在数组中的下标位置。
 
-###添加节点到链表中
+####添加节点到链表中
 
 找到数组下标后，会先进行 key 判重，如果没有重复，就准备将新值放入到链表的表头。
 
@@ -118,7 +124,7 @@ void createEntry(int hash, K key, V value, int bucketIndex) {
 
 这个方法的主要逻辑就是先判断是否需要扩容，需要的话先扩容，然后再将这个新的数据插入到扩容后的数组的相应位置处的链表的表头。
 
-###数组扩容
+####数组扩容
 
 前面我们看到，在插入新值的时候，如果当前的 size 已经达到了阈值，并且要插入的数组位置上已经有元素，那么就会触发扩容，扩容后，数组大小为原来的 2 倍。
 
@@ -143,7 +149,7 @@ void resize(int newCapacity) {
 
 由于是双倍扩容，迁移过程中，会将原来 table[i] 中的链表的所有节点，分拆到新的数组的 newTable[i] 和 newTable[i + oldLength] 位置上。如原来数组长度是 16，那么扩容后，原来 table[0] 处的链表中的所有元素会被分配到新数组中 newTable[0] 和 newTable[16] 这两个位置。代码比较简单，这里就不展开了。
 
-### get 过程分析
+#### get 过程分析
 
 相对于 put 过程，get 过程是非常简单的。
 
@@ -188,7 +194,7 @@ java7下 的HashMap 主要数据结构、主要方法讲解完毕。
 
 <br>
 
-## Java7 ConcurrentHashMap
+### Java7 ConcurrentHashMap
 
 ConcurrentHashMap 和 HashMap 思路是差不多的，但是因为它支持并发操作，所以要复杂一些。
 
@@ -202,7 +208,7 @@ concurrencyLevel：并行级别、并发数、Segment 数，怎么翻译不重�
 
 再具体到每个 Segment 内部，其实每个 Segment 很像之前介绍的 HashMap，不过它要保证线程安全，所以处理起来要麻烦些。
 
-### 初始化
+#### 初始化
 
 - initialCapacity：初始容量，这个值指的是整个 ConcurrentHashMap 的初始容量，实际操作的时候需要平均分给每个 Segment。
 - loadFactor：负载因子，之前我们说了，Segment 数组不可以扩容，所以这个负载因子是给每个 Segment 内部使用的。
@@ -263,7 +269,7 @@ public ConcurrentHashMap(int initialCapacity,
 - 这里初始化了 segment[0]，其他位置还是 null，至于为什么要初始化 segment[0]，后面的代码会介绍
 - 当前 segmentShift 的值为 32 – 4 = 28，segmentMask 为 16 – 1 = 15，姑且把它们简单翻译为移位数和掩码，这两个值马上就会用到
 
-### put 过程分析
+#### put 过程分析
 
 我们先看 put 的主流程，对于其中的一些关键细节操作，后面会进行详细介绍。
 
@@ -452,7 +458,7 @@ private HashEntry<K,V> scanAndLockForPut(K key, int hash, V value) {
 
 这个方法就是看似复杂，但是其实就是做了一件事，那就是获取该 segment 的独占锁，如果需要的话顺便实例化了一下 node。
 
-###扩容: rehash
+####扩容: rehash
 
 重复一下，segment 数组不能扩容，扩容是 segment 数组某个位置内部的数组 HashEntry\[] 进行扩容，扩容后，容量为原来的 2 倍。
 
@@ -529,7 +535,7 @@ private void rehash(HashEntry<K,V> node) {
 
 我觉得 Doug Lea 的这个想法也是挺有意思的，不过比较坏的情况就是每次 lastRun 都是链表的最后一个元素或者很靠后的元素，那么这次遍历就有点浪费了。不过 Doug Lea 也说了，根据统计，如果使用默认的阈值，大约只有 1/6 的节点需要克隆。
 
-###get 过程分析
+####get 过程分析
 
 相对于 put 来说，get 真的不要太简单。
 
@@ -560,7 +566,7 @@ public V get(Object key) {
 }
 ```
 
-### 并发问题分析
+#### 并发问题分析
 
 现在我们已经说完了 put 过程和 get 过程，我们可以看到 get 过程中是没有加锁的，那自然我们就需要去考虑并发问题。
 
@@ -586,7 +592,7 @@ Java7下的ConcurrentHashMap Over！
 
 <br>
 
-## Java8 HashMap
+### Java8 HashMap
 
 Java8 对 HashMap 进行了一些修改，最大的不同就是利用了红黑树，所以其由 数组+链表+红黑树 组成。
 
@@ -606,7 +612,7 @@ Java7 中使用 Entry 来代表每个 HashMap 中的数据节点，Java8 中使�
 
 我们根据数组元素中，第一个节点数据类型是 Node 还是 TreeNode 来判断该位置下是链表还是红黑树的。
 
-### put 过程分析
+#### put 过程分析
 
 ```java
 public V put(K key, V value) {
@@ -676,7 +682,7 @@ final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
 
 和 Java7 稍微有点不一样的地方就是，Java7 是先扩容后插入新值的，Java8 先插值再扩容，不过这个不重要。
 
-###数组扩容
+####数组扩容
 
 resize() 方法用于初始化数组或数组扩容，每次扩容后，容量为原来的 2 倍，并进行数据迁移。
 
@@ -769,7 +775,7 @@ final Node<K,V>[] resize() {
 }
 ```
 
-###get 过程分析
+####get 过程分析
 
 相对于 put 来说，get 真的太简单了。
 
@@ -813,7 +819,7 @@ final Node<K,V> getNode(int hash, Object key) {
 
 <br><br>
 
-## Java8 ConcurrentHashMap
+### Java8 ConcurrentHashMap
 
 Java7 中实现的 ConcurrentHashMap 说实话还是比较复杂的，Java8 对 ConcurrentHashMap 进行了比较大的改动。建议读者可以参考 Java8 中 HashMap 相对于 Java7 HashMap 的改动，对于 ConcurrentHashMap，Java8 也引入了红黑树。
 
@@ -825,7 +831,7 @@ Java7 中实现的 ConcurrentHashMap 说实话还是比较复杂的，Java8 对 
 
 结构上和 Java8 的 HashMap 基本上一样，不过它要保证线程安全性，所以在源码上确实要复杂一些。
 
-### 初始化
+#### 初始化
 
 ```java
 // 这构造函数里，什么都不干
@@ -847,7 +853,7 @@ sizeCtl 这个属性使用的场景很多，不过只要跟着文章的思路来
 
 如果你爱折腾，也可以看下另一个有三个参数的构造方法，这里我就不说了，大部分时候，我们会使用无参构造函数进行实例化，我们也按照这个思路来进行源码分析吧。
 
-###put 过程分析
+####put 过程分析
 
 仔细地一行一行代码看下去：
 
@@ -947,7 +953,7 @@ final V putVal(K key, V value, boolean onlyIfAbsent) {
 
 put 的主流程看完了，但是至少留下了几个问题，第一个是初始化，第二个是扩容，第三个是帮助数据迁移，这些我们都会在后面进行一一介绍。
 
-###初始化数组：initTable
+####初始化数组：initTable
 
 这个比较简单，主要就是初始化一个合适大小的数组，然后会设置 sizeCtl。
 
@@ -985,7 +991,7 @@ private final Node<K,V>[] initTable() {
 }
 ```
 
-###链表转红黑树: treeifyBin
+####链表转红黑树: treeifyBin
 
 前面我们在 put 源码分析也说过，treeifyBin 不一定就会进行红黑树转换，也可能是仅仅做数组扩容。我们还是进行源码分析吧。
 
@@ -1024,7 +1030,7 @@ private final Node<K,V>[] initTable() {
 }
 ```
 
-###扩容：tryPresize
+####扩容：tryPresize
 
 如果说 Java8 ConcurrentHashMap 的源码不简单，那么说的就是扩容操作和迁移操作。
 
@@ -1090,7 +1096,7 @@ private final void tryPresize(int size) {
 
 所以，可能的操作就是执行 1 次 transfer(tab, null) + 多次 transfer(tab, nt)，这里怎么结束循环的需要看完 transfer 源码才清楚。
 
-###数据迁移：transfer
+####数据迁移：transfer
 
 下面这个方法很点长，将原来的 tab 数组的元素迁移到新的 nextTab 数组中。
 
@@ -1308,7 +1314,7 @@ private final void transfer(Node<K,V>[] tab, Node<K,V>[] nextTab) {
 
 这个时候，再回去仔细看 tryPresize 方法可能就会更加清晰一些了。
 
- ### get 过程分析
+ #### get 过程分析
 
 get 方法从来都是最简单的，这里也不例外：
 
