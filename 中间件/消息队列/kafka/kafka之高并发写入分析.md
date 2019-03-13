@@ -76,3 +76,11 @@ kafka追加文件末尾按照顺序的方式来写数据的话，那么这种磁
 
 有兴趣的小伙伴可以延伸阅读 [CPU  cache](../../..//linux/CPU Cache 深入分析#cpu-cache介绍)
 
+#### Kafka特性
+
+1. 数据磁盘持久化：消息不在内存中cache，直接写入到磁盘，充分利用磁盘的顺序读写性能
+2. zero-copy：减少IO操作步骤
+3. 数据批量发送
+4. 数据压缩
+5. Topic划分为多个partition，提高parallelism
+
