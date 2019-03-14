@@ -5,3 +5,5 @@
 Thread Local 的原理与实现方法，并分析了其适用场景。
 
 http://www.jasongj.com/java/threadlocal/
+
+https://juejin.im/post/5c805cb9f265da2d9e177f6d

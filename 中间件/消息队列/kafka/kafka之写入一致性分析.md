@@ -80,11 +80,11 @@ Kafka 0.8 以前，是没有 HA 机制的，就是任何一个 broker 宕机了�
 
 比如说，我们假设创建了一个 topic，指定其 partition 数量是 3 个，分别在三台机器上。但是，如果第二台机器宕机了，会导致这个 topic 的 1/3 的数据就丢了，因此这个是做不到高可用的。
 
-[![kafka-before](https://github.com/doocs/advanced-java/raw/master/images/kafka-before.png)](https://github.com/doocs/advanced-java/blob/master/images/kafka-before.png)
+[![kafka-before](../../../image/kafka-before.png)](../../../image/kafka-before.png)
 
 Kafka 0.8 以后，提供了 HA 机制，就是 replica（复制品） 副本机制。每个 partition 的数据都会同步到其它机器上，形成自己的多个 replica 副本。所有 replica 会选举一个 leader 出来，那么生产和消费都跟这个 leader 打交道，然后其他 replica 就是 follower。写的时候，leader 会负责把数据同步到所有 follower 上去，读的时候就直接读 leader 上的数据即可。只能读写 leader？很简单，**要是你可以随意读写每个 follower，那么就要 care 数据一致性的问题**，系统复杂度太高，很容易出问题。Kafka 会均匀地将一个 partition 的所有 replica 分布在不同的机器上，这样才可以提高容错性。
 
-[![kafka-after](https://github.com/doocs/advanced-java/raw/master/images/kafka-after.png)](https://github.com/doocs/advanced-java/blob/master/images/kafka-after.png)
+[![kafka-after](../../../image/kafka-after.png)](../../../image/kafka-after.png)
 
 这么搞，就有所谓的**高可用性**了，因为如果某个 broker 宕机了，没事儿，那个 broker上面的 partition 在其他机器上都有副本的，如果这上面有某个 partition 的 leader，那么此时会从 follower 中**重新选举**一个新的 leader 出来，大家继续读写那个新的 leader 即可。这就有所谓的高可用性了。
 
@@ -95,6 +95,63 @@ Kafka 0.8 以后，提供了 HA 机制，就是 replica（复制品） 副本机
 简单理解
 
 > Leader 节点平时**对外提供读写** 且 把自身的**数据同步到Follower** 列表机器，一旦宕机，Follower就开始某种选举变成Leader
+
+
+
+### 写入一致性分析
+
+#### 提问
+
+写入数据都是往某个Partition的Leader写入的，然后那个Partition的Follower会从Leader同步数据。
+
+有一条数据是没同步到Partition0的Follower上去的，然后Partition0的Leader所在机器宕机了。
+
+此时就会选举Partition0的Follower作为新的Leader对外提供服务，然后用户是不是就读不到刚才写入的那条数据了？因为Partition0的Follower上是没有同步到最新的一条数据的。
+
+#### ISR机制
+
+然后发现kafka 对于这个问题的处理方式引入了ISR机制：
+
+> 自动给每个Partition维护一个ISR列表，这个列表里一定会有Leader，然后还会包含跟Leader保持同步的Follower。
+>
+> 也就是说，只要Leader的某个Follower一直跟他保持数据同步，那么就会存在于ISR列表里。
+>
+> 但是如果Follower因为自身发生一些问题，导致不能及时的从Leader同步数据过去，那么这个Follower就会被认为是“out-of-sync”，从ISR列表里踢出去。
+
+#### 数据不丢失
+
+写入Kafka的**数据不丢失**要点
+
+1. **每个Partition都至少得有1个Follower在ISR列表里，跟上了Leader的数据同步**
+2. **每次写入数据的时候，都要求至少写入Partition Leader成功，同时还有至少一个ISR里的Follower也写入成功，才算这个写入是成功了**
+3. **如果不满足上述两个条件，那就一直写入失败，让生产系统不停的尝试重试，直到满足上述两个条件，然后才能认为写入成功**
+4. **按照上述思路去配置相应的参数，才能保证写入Kafka的数据不会丢失**
+
+第一条，必须要求至少一个Follower在ISR列表里。
+
+那必须的啊，要是Leader没有Follower了，或者是Follower都没法及时同步Leader数据，那么这个事儿肯定就没法弄下去了。
+
+第二条，每次写入数据的时候，要求leader写入成功以外，至少一个ISR里的Follower也写成功。
+
+大家看下面的图，这个要求就是保证说，每次写数据，必须是leader和follower都写成功了，才能算是写成功，保证一条数据必须有两个以上的副本。
+
+这个时候万一leader宕机，就可以切换到那个follower上去，那么Follower上是有刚写入的数据的，此时数据就不会丢失了。
+
+假如现在leader没有follower了，或者是刚写入leader，leader立马就宕机，还没来得及同步给follower。
+
+在这种情况下，写入就会失败，然后你就让生产者不停的重试，直到kafka恢复正常满足上述条件，才能继续写入。
+
+这样就可以让写入kafka的数据不丢失。
+
+
+
+### 总结
+
+其实kafka的数据丢失问题，涉及到方方面面。
+
+譬如生产端的缓存问题，包括消费端的问题，同时kafka自己内部的底层算法和机制也可能导致数据丢失。
+
+但是平时写入数据遇到比较大的一个问题，就是leader切换时可能导致数据丢失。
 
 
 

@@ -159,6 +159,29 @@ Hessian 是 Caucho 开源的一个 RPC 框架，其通讯效率高于 WebService
 6. 适用范围：传入传出参数数据包较大，提供者比消费者个数多，提供者压力较大，可传文件。
 7. 适用场景：页面传输，文件传输，或与原生hessian服务互操作
 
+##### Hessian 的数据结构
+
+Hessian 的对象序列化机制有 8 种原始类型：
+
+- 原始二进制数据
+- boolean
+- 64-bit date（64 位毫秒值的日期）
+- 64-bit double
+- 32-bit int
+- 64-bit long
+- null
+- UTF-8 编码的 string
+
+另外还包括 3 种递归类型：
+
+- list for lists and arrays
+- map for maps and dictionaries
+- object for objects
+
+还有一种特殊的类型：
+
+- ref：用来表示对共享对象的引用。
+
 ##### **依赖:**
 
 ```
