@@ -176,7 +176,7 @@ func (c *searchServiceClient) Search(ctx context.Context, in *SearchRequest, opt
 
 ### 协议编码与解码
 
-#### 走进源码看何处编码
+#### grpc何时会pb编码
 
 在grpc-client端调用具体方法如 `search.pb.go#Search`时，最终是调用 `google.golang.org/grpc/call.go#Invoke`,对于我们的protobuf的message到这里会变成 `args, reply interface{}`，
 
@@ -498,6 +498,47 @@ protobuf message是一系列的键值对，message的二进制形式使用字段
 
 
 
+#### Varints 编码
+
+提到 Varints 编码，现在我们来正式介绍这种编码方案。
+
+总结的讲，Varints 编码的规则主要为以下三点：
+
+1. 在每个字节开头的 bit 设置了 **msb(most significant bit )**，标识是否需要继续读取下一个字节
+2. 存储数字对应的二进制补码
+3. 补码的低位排在前面
+
+为什么低位排在前面？这里主要是为编码实现（移位操作）做的一个小优化。可以尝试写个二进制移位进行编码解码的小例子来体会这一点。
+
+先来看一个最为简单的例子：
+
+**两个字节的数字 666 的编码**：
+
+```
+int32 val = 666; // 设置一个 int32 的字段的值 val = 666; 这时编码的结果如下
+原码：000 ... 101 0011010  // 666 的源码
+补码：000 ... 101 0011010  // 666 的补码
+Varints 编码：1#0011010  0#000 0101 （9a 05）  // 666 的 Varints 编码
+```
+
+**1#0011010 0#000 0101 （9a 05）解码**：
+
+这里的第一个字节 msb = 1，所以需要再读一个字节，第二个字节的 msb = 0，则读取两个字节后停止。读到两个字节后先去掉两个 msb，剩下：
+
+```
+0011010  000 0101
+```
+
+将这两个 7-bit 组反转得到补码：
+
+```
+000 0101 0011010
+```
+
+
+
+
+
 #### Signed Integers
 
 有符号整数类型(`sint32`、`sint64`)和“标准”整数类型(`int32`、`int64`)都是编码成varints，但是，当他们的值是一个负数时，会有很重要的不同。
@@ -616,16 +657,22 @@ bizType域号为13，type=2, tag为`13<<3 | 2 = 106`,length为3，value为`49 50
 
 RunMode域号为14，type=0,tag为 `14<<3 | 2 = 112`，因为type是0，没有length这个字段浪费，
 
-260 对应的bit位为
+260 对应的源码为
 
 ```
 0000 0001 0000 0100
 ```
 
-以8bit为单位，从后面转下顺序：
+以7bit为单位，
 
 ```
-0000 0100 0000 0001
+00 0001 0        000 0100
+```
+
+从后面转下顺序及补上：
+
+```
+1# 000 0100   0#00 0001 0
 ```
 
 即这16bit是个整数字段，所以将前面的单位 第一个bit从0变1，因为开头有1表示后面的8bit是连续的
@@ -644,7 +691,7 @@ RunMode域号为14，type=0,tag为 `14<<3 | 2 = 112`，因为type是0，没有le
 
 
 
-思考题比如整数32904这个应该怎么pb编码呢？
+**思考题**比如整数32904这个应该怎么pb编码呢？
 
 正常的bit表示：
 
@@ -652,19 +699,498 @@ RunMode域号为14，type=0,tag为 `14<<3 | 2 = 112`，因为type是0，没有le
 1000 0000 1000 1000
 ```
 
-以8bit为单位，从后面转下顺序：
+以7bit单位切割
 
 ```
-1000 1000 1000 0000
+10   00 0000 1     000 1000
 ```
 
-因为这些前面都开头为1了，需要对应前面加bit为:
+以7bit单位反转：
 
 ```
-1000 1000  1000 0001 0000 0001
- 000 1000   000 0001 0000 0001
-0000 0001   000 0001 000 1000
-        1   000 0001 000 1000 
-1 000 1000  1   000 000
+ 000 1000      00 0000 1     10 
+```
+
+补充msb位：
+
+```
+ 1#000 1000      1#00 0000 1     00000010 
+```
+
+```
+136 129 2
+```
+
+
+
+### 走进源码
+
+#### 编码链路
+
+```
+ss := &SearchRequest{BizType: "123"}
+	bs, _ := proto.Marshal(ss)
+```
+
+以这段代码，看它是如何转化成byte流的
+
+```
+github.com/golang/protobuf@v1.3.2/proto/table_marshal.go:2711 中func Marshal(pb Message) ([]byte, error) 的return info.Marshal(b, pb, false)
+
+github.com/golang/protobuf@v1.3.2/proto/table_marshal.go:132 中的func (a *InternalMessageInfo) Marshal(b []byte, msg Message, deterministic bool) ([]byte, error) 
+的return u.marshal(b, ptr, deterministic)
+
+github.com/golang/protobuf@v1.3.2/proto/table_marshal.go:221 中的func (u *marshalInfo) marshal(b []byte, ptr pointer, deterministic bool) ([]byte, error)
+的u.computeMarshalInfo()
+
+github.com/golang/protobuf@v1.3.2/proto/table_marshal.go:301 的func (u *marshalInfo) computeMarshalInfo()
+
+
+```
+
+```
+// normal fields
+	fields := make([]marshalFieldInfo, n) // batch allocation
+	u.fields = make([]*marshalFieldInfo, 0, n)
+	for i, j := 0, 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+
+		if strings.HasPrefix(f.Name, "XXX_") {
+			continue
+		}
+		field := &fields[j]
+		j++
+		field.name = f.Name
+		u.fields = append(u.fields, field)
+		if f.Tag.Get("protobuf_oneof") != "" {
+		//为具体的字段找到对应的编码器
+			field.computeOneofFieldInfo(&f, oneofImplementers)
+			continue
+		}
+		if f.Tag.Get("protobuf") == "" {
+			// field has no tag (not in generated message), ignore it
+			u.fields = u.fields[:len(u.fields)-1]
+			j--
+			continue
+		}
+		field.computeMarshalFieldInfo(&f)
+	}
+```
+
+```go
+func (fi *marshalFieldInfo) computeOneofFieldInfo(f *reflect.StructField, oneofImplementers []interface{}) {
+   fi.field = toField(f)
+   fi.wiretag = math.MaxInt32 // Use a large tag number, make oneofs sorted at the end. This tag will not appear on the wire.
+   fi.isPointer = true
+   fi.sizer, fi.marshaler = makeOneOfMarshaler(fi, f)
+   fi.oneofElems = make(map[reflect.Type]*marshalElemInfo)
+
+   ityp := f.Type // interface type
+   for _, o := range oneofImplementers {
+      t := reflect.TypeOf(o)
+      if !t.Implements(ityp) {
+         continue
+      }
+      sf := t.Elem().Field(0) // oneof implementer is a struct with a single field
+      tags := strings.Split(sf.Tag.Get("protobuf"), ",")
+      tag, err := strconv.Atoi(tags[1])
+      if err != nil {
+         panic("tag is not an integer")
+      }
+      wt := wiretype(tags[0])
+      //这里会对不同的wiretype 找到不同的marshaler，最终生成TLV方式
+      sizer, marshaler := typeMarshaler(sf.Type, tags, false, true) // oneof should not omit any zero value
+      fi.oneofElems[t.Elem()] = &marshalElemInfo{
+         wiretag:   uint64(tag)<<3 | wt,
+         tagsize:   SizeVarint(uint64(tag) << 3),
+         sizer:     sizer,
+         marshaler: marshaler,
+      }
+   }
+}
+```
+
+```go
+func typeMarshaler(t reflect.Type, tags []string, nozero, oneof bool) (sizer, marshaler) {
+   encoding := tags[0]
+
+   pointer := false
+   slice := false
+   if t.Kind() == reflect.Slice && t.Elem().Kind() != reflect.Uint8 {
+      slice = true
+      t = t.Elem()
+   }
+   if t.Kind() == reflect.Ptr {
+      pointer = true
+      t = t.Elem()
+   }
+
+   packed := false
+   proto3 := false
+   validateUTF8 := true
+   for i := 2; i < len(tags); i++ {
+      if tags[i] == "packed" {
+         packed = true
+      }
+      if tags[i] == "proto3" {
+         proto3 = true
+      }
+   }
+   validateUTF8 = validateUTF8 && proto3
+
+   switch t.Kind() {
+   case reflect.Bool:
+      if pointer {
+         return sizeBoolPtr, appendBoolPtr
+      }
+      if slice {
+         if packed {
+            return sizeBoolPackedSlice, appendBoolPackedSlice
+         }
+         return sizeBoolSlice, appendBoolSlice
+      }
+      if nozero {
+         return sizeBoolValueNoZero, appendBoolValueNoZero
+      }
+      return sizeBoolValue, appendBoolValue
+   case reflect.Uint32:
+      switch encoding {
+      case "fixed32":
+         if pointer {
+            return sizeFixed32Ptr, appendFixed32Ptr
+         }
+         if slice {
+            if packed {
+               return sizeFixed32PackedSlice, appendFixed32PackedSlice
+            }
+            return sizeFixed32Slice, appendFixed32Slice
+         }
+         if nozero {
+            return sizeFixed32ValueNoZero, appendFixed32ValueNoZero
+         }
+         return sizeFixed32Value, appendFixed32Value
+      case "varint":
+         if pointer {
+            return sizeVarint32Ptr, appendVarint32Ptr
+         }
+         if slice {
+            if packed {
+               return sizeVarint32PackedSlice, appendVarint32PackedSlice
+            }
+            return sizeVarint32Slice, appendVarint32Slice
+         }
+         if nozero {
+            return sizeVarint32ValueNoZero, appendVarint32ValueNoZero
+         }
+         return sizeVarint32Value, appendVarint32Value
+      }
+   case reflect.Int32:
+      switch encoding {
+      case "fixed32":
+         if pointer {
+            return sizeFixedS32Ptr, appendFixedS32Ptr
+         }
+         if slice {
+            if packed {
+               return sizeFixedS32PackedSlice, appendFixedS32PackedSlice
+            }
+            return sizeFixedS32Slice, appendFixedS32Slice
+         }
+         if nozero {
+            return sizeFixedS32ValueNoZero, appendFixedS32ValueNoZero
+         }
+         return sizeFixedS32Value, appendFixedS32Value
+      case "varint":
+         if pointer {
+            return sizeVarintS32Ptr, appendVarintS32Ptr
+         }
+         if slice {
+            if packed {
+               return sizeVarintS32PackedSlice, appendVarintS32PackedSlice
+            }
+            return sizeVarintS32Slice, appendVarintS32Slice
+         }
+         if nozero {
+            return sizeVarintS32ValueNoZero, appendVarintS32ValueNoZero
+         }
+         return sizeVarintS32Value, appendVarintS32Value
+      case "zigzag32":
+         if pointer {
+            return sizeZigzag32Ptr, appendZigzag32Ptr
+         }
+         if slice {
+            if packed {
+               return sizeZigzag32PackedSlice, appendZigzag32PackedSlice
+            }
+            return sizeZigzag32Slice, appendZigzag32Slice
+         }
+         if nozero {
+            return sizeZigzag32ValueNoZero, appendZigzag32ValueNoZero
+         }
+         return sizeZigzag32Value, appendZigzag32Value
+      }
+   case reflect.Uint64:
+      switch encoding {
+      case "fixed64":
+         if pointer {
+            return sizeFixed64Ptr, appendFixed64Ptr
+         }
+         if slice {
+            if packed {
+               return sizeFixed64PackedSlice, appendFixed64PackedSlice
+            }
+            return sizeFixed64Slice, appendFixed64Slice
+         }
+         if nozero {
+            return sizeFixed64ValueNoZero, appendFixed64ValueNoZero
+         }
+         return sizeFixed64Value, appendFixed64Value
+      case "varint":
+         if pointer {
+            return sizeVarint64Ptr, appendVarint64Ptr
+         }
+         if slice {
+            if packed {
+               return sizeVarint64PackedSlice, appendVarint64PackedSlice
+            }
+            return sizeVarint64Slice, appendVarint64Slice
+         }
+         if nozero {
+            return sizeVarint64ValueNoZero, appendVarint64ValueNoZero
+         }
+         return sizeVarint64Value, appendVarint64Value
+      }
+   case reflect.Int64:
+      switch encoding {
+      case "fixed64":
+         if pointer {
+            return sizeFixedS64Ptr, appendFixedS64Ptr
+         }
+         if slice {
+            if packed {
+               return sizeFixedS64PackedSlice, appendFixedS64PackedSlice
+            }
+            return sizeFixedS64Slice, appendFixedS64Slice
+         }
+         if nozero {
+            return sizeFixedS64ValueNoZero, appendFixedS64ValueNoZero
+         }
+         return sizeFixedS64Value, appendFixedS64Value
+      case "varint":
+         if pointer {
+            return sizeVarintS64Ptr, appendVarintS64Ptr
+         }
+         if slice {
+            if packed {
+               return sizeVarintS64PackedSlice, appendVarintS64PackedSlice
+            }
+            return sizeVarintS64Slice, appendVarintS64Slice
+         }
+         if nozero {
+            return sizeVarintS64ValueNoZero, appendVarintS64ValueNoZero
+         }
+         return sizeVarintS64Value, appendVarintS64Value
+      case "zigzag64":
+         if pointer {
+            return sizeZigzag64Ptr, appendZigzag64Ptr
+         }
+         if slice {
+            if packed {
+               return sizeZigzag64PackedSlice, appendZigzag64PackedSlice
+            }
+            return sizeZigzag64Slice, appendZigzag64Slice
+         }
+         if nozero {
+            return sizeZigzag64ValueNoZero, appendZigzag64ValueNoZero
+         }
+         return sizeZigzag64Value, appendZigzag64Value
+      }
+   case reflect.Float32:
+      if pointer {
+         return sizeFloat32Ptr, appendFloat32Ptr
+      }
+      if slice {
+         if packed {
+            return sizeFloat32PackedSlice, appendFloat32PackedSlice
+         }
+         return sizeFloat32Slice, appendFloat32Slice
+      }
+      if nozero {
+         return sizeFloat32ValueNoZero, appendFloat32ValueNoZero
+      }
+      return sizeFloat32Value, appendFloat32Value
+   case reflect.Float64:
+      if pointer {
+         return sizeFloat64Ptr, appendFloat64Ptr
+      }
+      if slice {
+         if packed {
+            return sizeFloat64PackedSlice, appendFloat64PackedSlice
+         }
+         return sizeFloat64Slice, appendFloat64Slice
+      }
+      if nozero {
+         return sizeFloat64ValueNoZero, appendFloat64ValueNoZero
+      }
+      return sizeFloat64Value, appendFloat64Value
+   case reflect.String:
+      if validateUTF8 {
+         if pointer {
+            return sizeStringPtr, appendUTF8StringPtr
+         }
+         if slice {
+            return sizeStringSlice, appendUTF8StringSlice
+         }
+         if nozero {
+            return sizeStringValueNoZero, appendUTF8StringValueNoZero
+         }
+         return sizeStringValue, appendUTF8StringValue
+      }
+      if pointer {
+         return sizeStringPtr, appendStringPtr
+      }
+      if slice {
+         return sizeStringSlice, appendStringSlice
+      }
+      if nozero {
+         return sizeStringValueNoZero, appendStringValueNoZero
+      }
+      return sizeStringValue, appendStringValue
+   case reflect.Slice:
+      if slice {
+         return sizeBytesSlice, appendBytesSlice
+      }
+      if oneof {
+         // Oneof bytes field may also have "proto3" tag.
+         // We want to marshal it as a oneof field. Do this
+         // check before the proto3 check.
+         return sizeBytesOneof, appendBytesOneof
+      }
+      if proto3 {
+         return sizeBytes3, appendBytes3
+      }
+      return sizeBytes, appendBytes
+   case reflect.Struct:
+      switch encoding {
+      case "group":
+         if slice {
+            return makeGroupSliceMarshaler(getMarshalInfo(t))
+         }
+         return makeGroupMarshaler(getMarshalInfo(t))
+      case "bytes":
+         if slice {
+            return makeMessageSliceMarshaler(getMarshalInfo(t))
+         }
+         return makeMessageMarshaler(getMarshalInfo(t))
+      }
+   }
+   panic(fmt.Sprintf("unknown or mismatched type: type: %v, wire type: %v", t, encoding))
+}
+```
+
+最后每个属性都有的TLV对应的生成方式：
+
+```go
+fi.oneofElems[t.Elem()] = &marshalElemInfo{
+			wiretag:   uint64(tag)<<3 | wt,
+			tagsize:   SizeVarint(uint64(tag) << 3),
+			sizer:     sizer,
+			marshaler: marshaler,
+		}
+```
+
+我们可以看bool和string是怎么生成对应TLV的byte流的：
+
+```go
+func appendVarint32Ptr(b []byte, ptr pointer, wiretag uint64, _ bool) ([]byte, error) {
+	p := *ptr.toUint32Ptr()
+	if p == nil {
+		return b, nil
+	}
+	b = appendVarint(b, wiretag)
+	b = appendVarint(b, uint64(*p))
+	return b, nil
+}
+```
+
+```go
+func appendStringValue(b []byte, ptr pointer, wiretag uint64, _ bool) ([]byte, error) {
+	v := *ptr.toString()
+	b = appendVarint(b, wiretag)
+	b = appendVarint(b, uint64(len(v)))
+	b = append(b, v...)
+	return b, nil
+}
+```
+
+
+
+#### 解码链路
+
+```go
+url1 := &UrlVO{
+	}
+	bs2 := []byte{10, 24, 104, 116, 116, 112, 115, 58, 47, 47, 103, 105, 116, 104, 117, 98, 46, 99, 111, 109, 47, 90, 101, 98, 45, 68, 18, 9, 109, 121, 45, 114, 101, 118, 105, 101, 119}
+	proto.Unmarshal(bs2, url1)
+	fmt.Println(url1.Url)
+```
+
+啊哈，你们猜会输出哪个？
+
+```
+https://github.com/Zeb-D
+```
+
+```go
+github.com/golang/protobuf@v1.3.2/proto/decode.go:334 中func Unmarshal(buf []byte, pb Message) error 
+的return NewBuffer(buf).Unmarshal(pb)
+
+github.com/golang/protobuf@v1.3.2/proto/decode.go:396 中func (p *Buffer) Unmarshal(pb Message) error 
+的err := info.Unmarshal(pb, p.buf[p.index:])
+
+github.com/golang/protobuf@v1.3.2/proto/table_unmarshal.go:134 中func (u *unmarshalInfo) unmarshal(m pointer, b []byte) error 
+的
+if atomic.LoadInt32(&u.initialized) == 0 {
+		u.computeUnmarshalInfo()
+	}
+
+github.com/golang/protobuf@v1.3.2/proto/table_unmarshal.go:267 中的func (u *unmarshalInfo) computeUnmarshalInfo() 的
+// Extract unmarshaling function from the field (its type and tags).
+		unmarshal := fieldUnmarshaler(&f)
+
+// fieldUnmarshaler returns an unmarshaler for the given field.
+func fieldUnmarshaler(f *reflect.StructField) unmarshaler {
+	if f.Type.Kind() == reflect.Map {
+		return makeUnmarshalMap(f)
+	}
+	return typeUnmarshaler(f.Type, f.Tag.Get("protobuf"))
+}
+
+
+// typeUnmarshaler returns an unmarshaler for the given field type / field tag pair.
+func typeUnmarshaler(t reflect.Type, tags string) unmarshaler
+
+```
+
+我们来看String的解码：
+
+```go
+func unmarshalStringValue(b []byte, f pointer, w int) ([]byte, error) {
+	if w != WireBytes {
+		return b, errInternalBadWireType
+	}
+	//读取前面的Varint包括tag length
+	x, n := decodeVarint(b)
+	if n == 0 {
+		return nil, io.ErrUnexpectedEOF
+	}
+	b = b[n:]
+	if x > uint64(len(b)) {
+		return nil, io.ErrUnexpectedEOF
+	}
+	v := string(b[:x])
+	*f.toString() = v
+	return b[x:], nil
+}
 ```
 
