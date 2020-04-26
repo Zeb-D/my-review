@@ -69,7 +69,6 @@ Protocol Buffers 是一种灵活，高效，自动化机制的结构数据序列
 |   string    |       字符串必须始终包含 UTF-8 编码或 7 位 ASCII 文本        |  string  |   String   | str/unicode[4] | *string  |
 |    bytes    |                     可以包含任意字节序列                     |  string  | ByteString |      str       |  []byte  |
 
-在 [Protocol Buffer 编码](https://www.jianshu.com/p/82ff31c6adc6) 中你可以找到有关序列化 message 时这些类型如何被编码的详细信息。
 
 [1] 在 Java 中，无符号的 32 位和 64 位整数使用它们对应的带符号表示，第一个 bit 位只是简单的存储在符号位中。
  [2] 在所有情况下，设置字段的值将执行类型检查以确保其有效。
