@@ -50,7 +50,7 @@ Docker 有一款极具竞争力的容器编排产品叫 Docker Swarm，但它没
 
 我们假设有一个持续运行且不需要存储状态的应用。
 
-<img src="../../image/k8s-6-levels-abs.png" alt="K8s 的 6 个抽象层" style="zoom:50%;" />
+<img src="../image/k8s-6-levels-abs.png" alt="K8s 的 6 个抽象层" style="zoom:50%;" />
 
 下面是 K8s 的6层抽象，级别由高到低排列：
 
@@ -149,7 +149,7 @@ Master 和 Worker Node 都包含子进程组件。
 
 Master 组件包含 API server（即 kube-apiserver）、Scheduler（即 kube-scheduler）、kube-controller-manager 及 cloud-controller manager。
 
-<img src="../../image/k8s-master-pro.png" alt="master-node-process" style="zoom:50%;" />
+<img src="../image/k8s-master-pro.png" alt="master-node-process" style="zoom:50%;" />
 
 
 
@@ -201,7 +201,7 @@ K8s 不会直接创建容器，它会创建包含容器的 Pod。Pod 中的容�
 
 如果由于 Node 出错，导致 Pod 关闭，ReplicaSet 会自动在另外的 Node 中替换 Pod。所以应该通过 Deployment 来创建 ReplicaSet，而不是直接创建，因为通过 Deployment 可以更加轻松地更新应用。
 
-<img src="../../image/k8s-ReplicaSet-StatefulSets.png" alt="k8s-ReplicaSet-StatefulSets" style="zoom:50%;" />
+<img src="../image/k8s-ReplicaSet-StatefulSets.png" alt="k8s-ReplicaSet-StatefulSets" style="zoom:50%;" />
 
 应用有时需要保存状态（state）信息，你可以将状态认为是当前用户与应用交互的状态。所以在电子游戏中，它是用户角色在某个时间点上的所有的唯一形态。
 
