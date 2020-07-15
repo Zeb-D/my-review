@@ -598,3 +598,7 @@ Retained Size: 48
 ### 展望
 
 其实内存分配及访问，也有可能涉及到cpu cache，路太长，先看看喵喵下
+
+参考：
+
+https://stackoverflow.com/questions/52353/in-java-what-is-the-best-way-to-determine-the-size-of-an-object

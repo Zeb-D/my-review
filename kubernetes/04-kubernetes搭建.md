@@ -254,6 +254,8 @@ apiServerExtraArgs:
 
 #### 准备工作
 
+> https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/
+
 最直接的办法，自然是到公有云上申请几个虚拟机。当然，如果条件允许的话，拿几台本地的物理服务器来组集群是最好不过了。这些机器只要满足如下几个条件即可：
 
 - 满足安装 Docker 项目所需的要求，比如 64 位的 Linux 操作系统、3.10 及以上的内核版本；

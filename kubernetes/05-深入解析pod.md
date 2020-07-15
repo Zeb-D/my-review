@@ -6,7 +6,7 @@
 
 ### Pod的由来
 
-你在学习和使用 Kubernetes 项目的过程中，已经不止一次地想要问这样一个问题：为什么我们会需要 Pod？
+在学习和使用 Kubernetes 项目的过程中，已经不止一次地想要问这样一个问题：为什么我们会需要 Pod？
 
 “Namespace 做隔离，Cgroups 做限制，rootfs 做文件系统”这样的“三句箴言”可以朗朗上口了，为什么 Kubernetes 项目又突然搞出一个 Pod 来呢？
 
