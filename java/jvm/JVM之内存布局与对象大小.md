@@ -20,7 +20,7 @@
 
 一个Java对象在内存中包括对象头、实例数据和补齐填充3个部分：
 
-![img](http://upload-images.jianshu.io/upload_images/5401975-4c082ac80e1c042c.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1000/format/webp)
+<img src="../../image/jvm-object-mem.png" alt="img" style="zoom:80%;" />
 
 ### 对象头
 
@@ -160,7 +160,7 @@ Retained Size: 24 bytes
 
 在MAT中分析的结果如下：
 
-![img](http://upload-images.jianshu.io/upload_images/5401975-9847a5f4826aac87.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1000/format/webp)
+![img](../../image/jvm-object-mem-nat.png)
 
 所以大小是24字节。其实这里并没有padding，因为正好是24字节。如果我们把`long b;`换成`int b;`之后，再来看一下结果：
 
@@ -245,7 +245,7 @@ Shallow Size比较简单，这里对象头大小为12字节， 实际数据大�
 
 通过MAT查看如下：
 
-![img](https://upload-images.jianshu.io/upload_images/5401975-a29a35d99fabd44e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1000/format/webp)
+![img](../../image/jvm-object-longArr-men.png)
 
 #### 关闭指针压缩的情况
 
@@ -261,7 +261,7 @@ Retained Size: 96 bytes
 
 通过MAT查看如下：
 
-![img](https://upload-images.jianshu.io/upload_images/5401975-4f2d4823194fdc3c.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1000/format/webp)
+![img](../../image/jvm-object-longArr-useCompressedOops.png)
 
 ### 包装类型
 
@@ -321,7 +321,7 @@ Retained Size: 192 bytes
 
 MAT中的结果如下：
 
-![img](https://upload-images.jianshu.io/upload_images/5401975-077c9079f1d47c26.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1000/format/webp)
+![img](../../image/jvm-object-box-mem.png)
 
 #### 关闭指针压缩的情况
 
@@ -335,7 +335,7 @@ Retained Size: 272 bytes
 
 MAT中的结果如下：
 
-![img](http://upload-images.jianshu.io/upload_images/5401975-1350ea97e9c4ac67.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1000/format/webp)
+![img](../../image/jvm-object-box-mem-useCompressedOops.png)
 
 ### String类型
 
@@ -400,7 +400,7 @@ Retained Size: 64 bytes
 
 MAT中的结果如下：
 
-![img](http://upload-images.jianshu.io/upload_images/5401975-f2f1ae5d42fa4a1d.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1000/format/webp)
+![img](../../image/jvm-object-string-mem.png)
 
 #### 关闭指针压缩的情况
 
@@ -414,7 +414,7 @@ Retained Size: 88 bytes
 
 MAT中的结果如下：
 
-![img](http://upload-images.jianshu.io/upload_images/5401975-0f6c49e6b6012ca8.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1000/format/webp)
+![img](../../image/jvm-object-string-useCompressedOops.png)
 
 ### 其他引用类型的大小
 
@@ -577,17 +577,17 @@ Retained Size: 48
 
 如果分配到最后，这时字节数不是8的倍数，则需要padding。这里实际的大小是42字节，所以padding6字节，最终占用48字节。
 
-<br>
 
-参考文章：https://www.jianshu.com/p/91e398d5d17c
+
+
 
 ------
 
-## 注
+## 扩展
 
 ### jdk 有自带包 计算对象大小
 
-除了有些通用的工具类，
+除了有些通用的工具类 如java8的`jdk.nashorn.internal.ir.debug.ObjectSizeCalculator`，
 
 另外，如果要在代码中运行期动态获取一个对象的大小，可以多研究下 `java.lang.instrument` 这里的类，可以从加载类到创建，到运行具体的方法都有个比较确切的运行机制，有点偏向于JVM GC打的日志，目前个人还没研究透这方面，有需求的小伙伴可以交流或者issue
 
