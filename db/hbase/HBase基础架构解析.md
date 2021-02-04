@@ -199,18 +199,18 @@ HFile由六部分组成：
 
 数据块组成图如下：
 
-| **Data Block Magic*****{'D', 'A', 'T', 'A', 'B', 'L', 'K', 42 }\*** |         |      |       |
-| ------------------------------------------------------------ | ------- | ---- | ----- |
-| key长                                                        | value长 | key  | value |
-| key长                                                        | value长 | key  | value |
-| ……                                                           |         |      |       |
-| key长                                                        | value长 | key  | value |
-| **Data Block Magic*****{'D', 'A', 'T', 'A', 'B', 'L', 'K', 42 }\*** |         |      |       |
-| key长                                                        | value长 | key  | value |
-| key长                                                        | value长 | key  | value |
-| ……                                                           |         |      |       |
-| key长                                                        | value长 | key  | value |
-| Blocks ……                                                    |         |      |       |
+| Data Block Magic{'D', 'A', 'T', 'A', 'B', 'L', 'K', 42 } |         |      |       |
+| -------------------------------------------------------- | ------- | ---- | ----- |
+| key长                                                    | value长 | key  | value |
+| key长                                                    | value长 | key  | value |
+| ……                                                       |         |      |       |
+| key长                                                    | value长 | key  | value |
+| Data Block Magic{'D', 'A', 'T', 'A', 'B', 'L', 'K', 42 } |         |      |       |
+| key长                                                    | value长 | key  | value |
+| key长                                                    | value长 | key  | value |
+| ……                                                       |         |      |       |
+| key长                                                    | value长 | key  | value |
+| Blocks ……                                                |         |      |       |
 
 数据块部分由多个block块组成，每个数据块由块头 + 多个cell(key-value对)集合组成，如上图。每个数据块的大小在创建表的列族的时候可以指定，默认为（64 * 1024）。
 
@@ -221,13 +221,13 @@ HFile由六部分组成：
 
 1. **Data Block Magic** – 数据块头，8字节，固定字节如下：{'D', 'A', 'T', 'A', 'B', 'L', 'K', 42 }。
 
-2. **key****长** – 4字节整型，记录每个cell的key的长度。
+2. **key**长 – 4字节整型，记录每个cell的key的长度。
 
-3. **value****长** – 4字节整型，记录每个cell的value的长度。
+3. **value**长 – 4字节整型，记录每个cell的value的长度。
 
 4. **key** – cell的key值，byte[]类型，组成如下：
 
-   **rowKey****的长（2字节）+ rowKey + family的长（1字节） + family + qualify + timestampe(8字节) + keyType类型（1字节）**
+   **rowKey**的长（2字节）+ rowKey + family的长（1字节） + family + qualify + timestampe(8字节) + keyType类型（1字节）**
 
    1）rowKey的长度不能大于0x7fff(32767).
 
@@ -268,12 +268,19 @@ HFile由六部分组成：
 
 举个栗子：
  执行这条语句：`Put #1: rowkey=row1, cf:attr1=value1`。KeyValue的核心部分将会是这样：
+
  rowlength -----------→ 4（row1长度）
+
  row -----------------→ row1
+
  columnfamilylength --→ 2
+
  columnfamily --------→ cf
+
  columnqualifier -----→ attr1
+
  timestamp -----------→ server time of Put
+
  keytype -------------→ Put
 
 
@@ -284,10 +291,10 @@ HFile由六部分组成：
 
 在StoreFile中，如果使用BloomFilter,则StoreFile将会把BloomFilter的信息保存到HFile中的元数据中， 元数据块中只保存元数据的value值，key值保存在元数据索引块中。格式如下：
 
-| **Meta** **Block Magic*****{'M', 'E', 'T', 'A', 'B', 'L', 'K', 99 }\*** |
+| **Meta** Block Magic{'M', 'E', 'T', 'A', 'B', 'L', 'K', 99 } |
 | ------------------------------------------------------------ |
 | Meta Data Value                                              |
-| **Meta** **Block Magic*****{'M', 'E', 'T', 'A', 'B', 'L', 'K', 99 }\*** |
+| **Meta** Block Magic{'M', 'E', 'T', 'A', 'B', 'L', 'K', 99 } |
 | Meta Data Value                                              |
 | ……                                                           |
 
@@ -343,7 +350,7 @@ fileInfo各项说明：
 
 3. value值，保存fileInfo中值的value值。在HFile中的组成为
 
-**value****长+value**
+**value**长+value
 
 **其中value长以压缩的整型保存，压缩整型具体格式参考key值中关于压缩整型的说明。**
 
