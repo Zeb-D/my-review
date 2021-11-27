@@ -1160,3 +1160,12 @@ private final ConcurrentMap<String, Holder<Object>> cachedInstances = new Concur
 
 
 
+#### 感受
+
+- 用了比较多的缓存cache，不会造成重复加载
+- 只有触发了获取实例操作不止Adapte，才会去做一些loadResource、newInstance、IOC耗时操作，做到了延时加载；
+- dubbo有较多的SPI接口但没有实现类，这说明dubbo的SPI机制是一个较好的插件思路；
+- 单例模式的dubble check 机制避免了Adaptive字节码存在重复编译情况；
+- 字节码生成code的参数名是硬编码(arg开头加下标)，因为并不是所有的项目都有这个问题；
+- spi的IOC注入机制没spring的强，感觉有点弱；
+
