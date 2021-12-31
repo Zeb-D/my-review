@@ -14,7 +14,7 @@ rust适应于逻辑计算，但入门高，无GC（可以简单理解实时分�
 
 回归主题，go和java都内置了GC操作，所以大家上来都可以梭一把，也不用担心像`C++`一样担心内存炸；
 
-本文不讨论go的内存分配或GC算法，有兴趣的伙伴可以简单看下[核心原理--golang-runtime.md](./核心原理--golang-runtime.md);
+本文不讨论go的内存分配或GC算法，有兴趣的伙伴可以简单看下[核心原理--golang-runtime.md](核心原理-golang-runtime.md);
 
 
 
