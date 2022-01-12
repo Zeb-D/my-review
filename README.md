@@ -29,12 +29,12 @@
 - linux 这里会研究下linux的内核或者协议
 - tool 学习中值得存放的工具
 - 中间件 这里会是一些中间件，当然有些框架也能称得上
-- --[es](https://github.com/Zeb-D/my-review/blob/master/中间件/es) 一般存放一些搜索引擎，不单单是es
-- --[loadbannce](https://github.com/Zeb-D/my-review/blob/master/中间件/loadbannce) 负载均衡
-- --[netty](https://github.com/Zeb-D/my-review/blob/master/中间件/netty)
-- --[rpc](https://github.com/Zeb-D/my-review/blob/master/中间件/rpc) 框架那么多，所以不只有dubbo，也可能是HSF
-- --[zk](https://github.com/Zeb-D/my-review/blob/master/中间件/zk)
-- --[消息队列](https://github.com/Zeb-D/my-review/blob/master/中间件/消息队列)
+- --[es](https://github.com/Zeb-D/my-review/blob/master/middleware/es) 一般存放一些搜索引擎，不单单是es
+- --[loadbannce](https://github.com/Zeb-D/my-review/blob/master/middleware/loadbannce) 负载均衡
+- --[netty](https://github.com/Zeb-D/my-review/blob/master/middleware/netty)
+- --[rpc](https://github.com/Zeb-D/my-review/blob/master/middleware/rpc) 框架那么多，所以不只有dubbo，也可能是HSF
+- --[zk](https://github.com/Zeb-D/my-review/blob/master/middleware/zk)
+- --[消息队列](https://github.com/Zeb-D/my-review/blob/master/middleware/mq)
 - [分布式](https://github.com/Zeb-D/my-review/blob/master/分布式)
 - [网络协议](https://github.com/Zeb-D/my-review/blob/master/网络协议) 本应该放到linux的，但放到这里
 - [middleware-design](https://github.com/Zeb-D/my-review/blob/master/middleware-design) 这里将是带领大家实现有价值的中间件或者组件

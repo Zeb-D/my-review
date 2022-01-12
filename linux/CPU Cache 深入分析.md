@@ -124,7 +124,7 @@ public final static class VolatileLong {
 
 ```
 
-通过[Java对象内存布局](../java/jvm/Java对象内存布局.md)文章中对paddign的分析可知，由于都是long类型的变量，这里就是按照声明的顺序分配内存，那么这可以保证在同一个缓存行中只有一个VolatileLong对象。
+通过[Java对象内存布局](../java/jvm/JVM之内存布局与对象大小.md)文章中对paddign的分析可知，由于都是long类型的变量，这里就是按照声明的顺序分配内存，那么这可以保证在同一个缓存行中只有一个VolatileLong对象。
 
 这里有一个问题：
 
@@ -188,7 +188,7 @@ public class ContendedTest {
 }
 ```
 
-这里还是使用到了classmexer.jar，可以参考[Java对象内存布局](../java/jvm/Java对象内存布局.md)中的说明。
+这里还是使用到了classmexer.jar，可以参考[Java对象内存布局](../java/jvm/JVM之内存布局与对象大小.md)中的说明。
 
 这里在变量b和c中使用了@sun.misc.Contended注解，并将这两个变量分为1组，执行结果如下：
 

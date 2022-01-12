@@ -21,7 +21,9 @@ inux 网络基于 TCP/IP 模型，构建了其网络协议栈，把繁杂的网�
 
 
 在应用程序通过套接字接口发送或者接收网络包时，这些网络包都要经过协议栈的逐层处理（系统调用及用户态切换）。我们通常用带宽、吞吐、延迟、PPS 等来衡量网络性能。
+
 什么是经典的 C10K 和 C1000K 问题，以更好理解 Linux 网络的工作原理，并进一步分析，如何做到单机支持 C10M。
+
 注意，C10K 和 C1000K 的首字母 C 是 Client 的缩写。C10K 就是单机同时处理 1 万个请求（并发连接 1 万）的问题，而 C1000K 也就是单机支持处理 100 万个请求（并发连接 100 万）的问题。
 
 
@@ -40,8 +42,12 @@ inux 网络基于 TCP/IP 模型，构建了其网络协议栈，把繁杂的网�
 
 #### 分析
 
-说到 I/O 的模型，文件 I/O，其实网络 I/O 模型也类似。在 C10K 以前，Linux 中网络处理都用同步阻塞的方式，也就是每个请求都分配一个进程或者线程。请求数只有 100 个时，这种方式自然没问题，但增加到 10000 个请求时，10000 个进程或线程的调度、上下文切换乃至它们占用的内存，都会成为瓶颈。
+说到 I/O 的模型，文件 I/O，其实网络 I/O 模型也类似。在 C10K 以前，Linux 中网络处理都用同步阻塞的方式，也就是每个请求都分配一个进程或者线程。
+
+请求数只有 100 个时，这种方式自然没问题，但增加到 10000 个请求时，10000 个进程或线程的调度、上下文切换乃至它们占用的内存，都会成为瓶颈。
+
 既然每个请求分配一个线程的方式不合适，那么，为了支持 10000 个并发请求，这里就有两个问题需要我们解决。
+
 第一，怎样在一个线程内处理多个请求，也就是要在一个线程内响应多个网络 I/O。以前的同步阻塞方式下，一个线程只能处理一个请求，到这里不再适用，是不是可以用非阻塞 I/O 或者异步 I/O 来处理多个网络请求呢？
 
 第二，怎么更节省资源地处理客户请求，也就是要用更少的线程来服务这些请求。是不是可以继续用原来的 100 个或者更少的线程，来服务现在的 10000 个请求呢？
@@ -151,7 +157,11 @@ epoll 使用事件驱动的机制，只关注有 I/O 事件发生的文件描述
 
 ### 四、延伸原理
 
-非阻塞模型会让用户进程一直轮询调用系统函数，频繁地做内核态切换。想要做优化其实也比较简单，我们假想个业务场景，A业务系统会调用B的基础服务查询单个用户的信息。随着业务的发展，A的逻辑变复杂了，需要查100个用户的信息。很明显，A希望B提供一个批量查询的接口，用集合作为入参，一次性把数据传递过去就省去了频繁的系统间调用。
+非阻塞模型会让用户进程一直轮询调用系统函数，频繁地做内核态切换。
+
+想要做优化其实也比较简单，我们假想个业务场景，A业务系统会调用B的基础服务查询单个用户的信息。
+
+随着业务的发展，A的逻辑变复杂了，需要查100个用户的信息。很明显，A希望B提供一个批量查询的接口，用集合作为入参，一次性把数据传递过去就省去了频繁的系统间调用。
 
  
 
@@ -232,22 +242,50 @@ select()允许程序监控多个fd，阻塞等待直到一个或多个fd到达"�
 
  
 
-假设fds为{1, 2, 3, 5, 7}对应的bitmap为"01110101"，抛给内核空间轮询，当有读写事件时重新标记同时停止阻塞，然后整体返回用户空间。由此我们可以看到select()系统调用的弊端也是比较明显的：
+假设fds为{1, 2, 3, 5, 7}对应的bitmap为"01110101"，抛给内核空间轮询，当有读写事件时重新标记同时停止阻塞，然后整体返回用户空间。
+
+由此我们可以看到select()系统调用的弊端也是比较明显的：
 
 - 复杂度O(n)，轮询的任务交给了内核来做，复杂度并没有变化，数据取出后也需要轮询哪个fd上发生了变动；
 - 用户态还是需要不断切换到内核态，直到所有的fds数据读取结束，整体开销依然很大；
-- fd_set有大小的限制，目前被硬编码成了**1024**；
+- fd_set有大小的限制，目前被硬编码成了**1024**；由于 readfds 是长度为 32 的整型数组，32*32=1024，bitmap 机制来表示的 fd 最多可表示 1024 个，socket 连接有上限
 - fd_set不可重用，每次操作完都必须重置；
 
 
 
 #### **poll**
 
+`poll` 实际上在 Unix 系统是不支持的，不像 select 使用 bitmap 集合来存储 fd 值，它通过一个大小为 nfds 的 pollfd 结构来表示需要监控的 fd set，函数签名如下：
+
 > **poll()** 构造函数信息如下所示：
 >
-> */** \* poll()**系统调用* ** ** *参数列表：* **  \*fds     - pollfd**结构体* **   nfds    -* *要监视的描述符的数量* **   timeout   -* *等待时间* **/*int poll（struct pollfd *fds, nfds_t nfds, int *timeout）; ### pollfd的结构体struct pollfd{int fd；*//* *文件描述符*short event；*//* *请求的事件*short revent；*//* *返回的事件*}
+> /** 
 >
->  
+>  poll()系统调用
+>
+> 参数列表：
+>
+>  \*fds     - pollfd结构体
+>
+> nfds    -要监视的描述符的数量
+>
+> timeout   -等待时间*/*
+>
+> int poll（struct pollfd *fds, nfds_t nfds, int *timeout）; 
+>
+> pollfd的结构体
+>
+> struct pollfd{
+>
+> *int fd；*// *文件描述符*
+>
+> short event；*//* *请求的事件*
+>
+> short revent；*//* *返回的事件*
+>
+> }
+>
+> 
 >
 > 官方文档对**poll()**的描述：
 >
@@ -265,7 +303,7 @@ poll() 非常像select()，它也是阻塞等待直到一个或多个fd到达"�
 
 唯一的区别在于**poll()**摒弃掉了位图算法，使用自定义的结构体**pollfd**，在**pollfd**内部封装了fd，
 
-并通过event变量注册感兴趣的可读可写事件（**POLLIN****、POLLOUT**），最后把 **pollfd** 交给内核。
+并通过event变量注册感兴趣的可读可写事件（POLLIN、POLLOUT），最后把 **pollfd** 交给内核。
 
 当有读写事件触发的时候，我们可以通过轮询 **pollfd**，判断revent确定该fd是否发生了可读可写事件。
 
@@ -279,8 +317,11 @@ poll() 非常像select()，它也是阻塞等待直到一个或多个fd到达"�
 
 **poll()** 相对于**select()**，主要的优势是使用了pollfd的结构体：
 
-- 没有了bitmap大小1024的限制；
-- 通过结构体中的revents置位；
+- poll 不需要每次都重新构建需要监控的 fd set，但还是会有引起上下文切换的内存 copy
+- poll 不需要像 select 那样需要用户计算 fd 的最大值 +1，作为 select 函数的第一个参数
+- poll 减少了 fd 的遍历，在 select 中监控的某 socket 所对应的 fd 值为 1000，那么需要做 1000 次循环
+- poll 解除了 select 对于 fd 数量 1024 的限制
+- poll 在 unix 下不支持
 
  
 
@@ -289,6 +330,20 @@ poll() 非常像select()，它也是阻塞等待直到一个或多个fd到达"�
 
 
 #### **epoll**
+
+细看 `select` 和 `poll` 的函数原型，我们会发现，每次调用 `select` 或 `poll` 都在重复地准备整个需要监控的 fds 集合。我们需要监控三个 socket，就要准备一个 `readfds`，然后新增监控一个 socket，就要再准备一个 `readfds`（包含旧的和新的 socket 的 `readfds`）。
+
+然而对于频繁调用的 `select` 或 `poll` 而言，fds 集合的变化频率要低得多，我们没必要每次都重新准备整个 fds 集合。
+
+于是，`epoll` 引入了 `epoll_ctl` 系统调用，将高频调用的 `epoll_wait` 和低频的 `epoll_ctl` 隔离开。
+
+`epoll_ctl` 是 `epoll` 的事件注册函数，它不同与 `select()` 是在监听事件时，告诉内核要监听什么类型的事件，而是在这里先注册要监听的事件类型。
+
+到了有变化才变更，将 `select` 或 `poll` 高频、大块内存拷贝变成 `epoll_ctl` 的低频、小块内存的拷贝，避免了大量的内存拷贝。
+
+同时，对于高频 `epoll_wait` 的可读就绪的 fd 集合返回的拷贝问题，`epoll` 通过内核与用户空间 `mmap` 同一块内存来解决。
+
+`mmap` 将用户空间的一块地址和内核空间的一块地址同时映射到相同的一块物理内存地址（不管是用户空间还是内核空间都是虚拟地址，最终要通过地址映射映射到物理地址），使得这块物理内存对内核和对用户均可见，减少用户态和内核态之间的数据交换。
 
 epoll()应该是目前最主流，使用范围最广的一组多路复用的函数调用，像我们熟知的Nginx、Redis都广泛地使用了此种模式。接下来我们重点分析下，epoll()的实现采用了“三步走”策略，它们分别是`epoll_create()、epoll_ctl()、epoll_wait()`
 
@@ -338,7 +393,50 @@ int epoll_wait（int epfd, struce epoll_event *event , int maxevents, int timeou
 
 ![linux-io-epoll-struct.png](../image/linux-io-epoll-struct.png)
 
+内核代码：
+
+```
+ struct epoll_event events[5];
+  int epfd = epoll_create(10);
+  ...
+  ...
+  for (i=0;i<5;i++) 
+  {
+    static struct epoll_event ev;
+    memset(&client, 0, sizeof (client));
+    addrlen = sizeof(client);
+    ev.data.fd = accept(sockfd,(struct sockaddr*)&client, &addrlen);
+    ev.events = EPOLLIN;
+    epoll_ctl(epfd, EPOLL_CTL_ADD, ev.data.fd, &ev); 
+  }
+  
+  while(1){
+  	puts("round again");
+  	nfds = epoll_wait(epfd, events, 5, 10000);
+	
+	for(i=0;i<nfds;i++) {
+			memset(buffer,0,MAXBUF);
+			read(events[i].data.fd, buffer, MAXBUF);
+			puts(buffer);
+	}
+  }
+```
+
+通过上面的 socket 的睡眠队列唤醒逻辑我们知道，socket 唤醒睡眠在其睡眠队列的 `wait_entry` 的时候会调用 `wait_entry` 的回调函数 `callback`，并且，我们可以在 `callback` 中做任何事情。为了做到只遍历就绪的 fd，我们需要有个地方来组织那些已经就绪的 fd。
+
+为此，`epoll` 引入了一个中间层，一个双向链表 `ready_list`，一个单独的睡眠队列 `single_epoll_wait_list`，并且，与 `select` 或 `poll` 不同的是，`epoll` 的 task 不需要同时插入到多路复用的 socket 集合的所有睡眠队列中，相反 task 只是插入到中间层的 `epoll` 的单独睡眠队列中（即 `single_epoll_wait_list`），task 睡眠在 `epoll` 的单独队列上，等待事件的发生。
+
+同时，引入一个中间的 `wait_entry_sk`，它与某个 socket 密切相关，`wait_entry_sk` 睡眠在 socket 的睡眠队列上，其 `callback` 函数逻辑是将当前 socket 排入到 `epoll` 的 `ready_list` 中，并唤醒 `epoll` 的 `single_epoll_wait_list`。
+
+而 `single_epoll_wait_list` 上睡眠的 task 的回调函数就明朗了：遍历 `ready_list` 上的所有 socket，挨个调用 socket 的 `poll` 函数收集事件，然后唤醒 task 从 `epoll_wait` 返回。
+
+
+
 **epoll()** 基本上完美地解决了 **poll()** 函数遗留的两个问题：
 
 - 没有了频繁的用户态到内核态的切换；
 - O(1)复杂度，返回的"nfds"是一个确定的可读写的数量，相比于之前循环n次来确认，复杂度降低了不少；
+- epoll 减少了用户态和内核态间的内存 copy
+- epoll 有着高效的 fd 操作的红黑树结构
+- epoll 基本没有 fd 数量限制
+- epoll 每次只需遍历 ready_list 中就绪的 socket 即可
