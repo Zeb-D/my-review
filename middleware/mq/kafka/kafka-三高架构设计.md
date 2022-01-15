@@ -172,7 +172,7 @@ Producer、Broker、Consumer 要使用相同的压缩算法, 在 Producer 向 Br
 
 但是如果只是按照顺序的方式追加文件末尾的话, 这种磁盘顺序写的性能基本可以跟写内存的性能差不多的。
 
-![kafka-triHigh-oscache-disk.png](../../../image/kafka-triHigh-oscache-disk.png)
+<img src="../../../image/kafka-triHigh-oscache-disk.png" alt="kafka-triHigh-oscache-disk.png" style="zoom:50%;" />
 
 
 
@@ -249,9 +249,9 @@ Kafka 中的选举大致分为三大类: 控制器的选举, Leader 的选举, �
 
    为了保证高可用，kafka 的分区是多副本的，如果其中一个副本丢失了，那么还可以从其他副本中获取分区数据(要求对应副本的数据必须是完整的)。这是 Kafka 数据一致性的基础, 下面将详解介绍 Kafka 的副本机制。
 
-   Kafka 使用 Zookeeper 来维护集群 Brokers 的信息，每个 Broker 都有一个唯一的标识**`broker.id`**，用于标识自己在集群中的身份。Brokers 会通过 Zookeeper 选举出一个叫**`Controller Broker`**节点，它除了具备其它Brokers的功能外，还**负责管理主题分区及其副本的状态**。
+   Kafka 使用 Zookeeper 来维护集群 Brokers 的信息，每个 Broker 都有一个唯一的标识`broker.id`，用于标识自己在集群中的身份。Brokers 会通过 Zookeeper 选举出一个叫**`Controller Broker`**节点，它除了具备其它Brokers的功能外，还负责管理主题分区及其副本的状态。
 
-   在 Kafka 中 Topic 被分为多个分区（Partition），分区是 Kafka 最基本的存储单位。在创建主题的时候可使用**`replication-factor`**参数指定分区的副本个数。分区副本总会有一个 Leader 副本，所有的消息都直接发送给Leader 副本，其它副本都需要通过复制 Leader 中的数据来保证数据一致。当 Leader 副本不可用时，其中一个 Follower 将会被选举并成为新的 Leader。
+   在 Kafka 中 Topic 被分为多个分区（Partition），分区是 Kafka 最基本的存储单位。在创建主题的时候可使用`replication-factor`参数指定分区的副本个数。分区副本总会有一个 Leader 副本，所有的消息都直接发送给Leader 副本，其它副本都需要通过复制 Leader 中的数据来保证数据一致。当 Leader 副本不可用时，其中一个 Follower 将会被选举并成为新的 Leader。
 
 
 
@@ -266,8 +266,7 @@ Leader 副本必然是同步副本，**也就是说, ISR 不只是追随者副�
 **甚至在某些情况下, ISR 只有Leader 这一个副本,** 而对于 Follower 副本来说，它需要满足以下条件才能被认为是同步副本：
 
 1) 必须定时向 Zookeeper 发送心跳；
-
-  2 在规定的时间内从 Leader 副本 "低延迟" 地获取过消息。
+2) 在规定的时间内从 Leader 副本 "低延迟" 地获取过消息。
 
 
 
