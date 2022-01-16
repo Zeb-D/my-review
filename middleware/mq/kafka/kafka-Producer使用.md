@@ -239,7 +239,7 @@ if (size == poolableSize && !this.free.isEmpty())
 
 **acks**
 
-​     参数说明：对于 Kafka Producer 来说是一个非常重要的参数，它表示指定分区中成功写入消息的副本数量，是 Kafka 生产端消息的持久性的保证, 详细可以查看 [****](http://mp.weixin.qq.com/s?__biz=Mzg5MTU3OTQyMA==&mid=2247484686&idx=1&sn=1ae16db530cf62e51a3d0b0923927846&chksm=cfca787df8bdf16b462e9c65aa3357797baf5d1869d54363f7502b7c00f69e803a0612ef7a05&scene=21#wechat_redirect) 中 **ACK机制部分**
+​     参数说明：对于 Kafka Producer 来说是一个非常重要的参数，它表示指定分区中成功写入消息的副本数量，是 Kafka 生产端消息的持久性的保证
 
 **max.request.size**
 
@@ -263,7 +263,7 @@ if (size == poolableSize && !this.free.isEmpty())
 
 **compression.type**
 
-​     参数说明：**该参数表示生产端是否要对消息进行压缩，默认值为不压缩(none)。**压缩可以显著减少网络IO传输、磁盘IO以及磁盘空间，从而提升整体吞吐量，但也是以牺牲CPU开销为代价的。详细可以查看[****](http://mp.weixin.qq.com/s?__biz=Mzg5MTU3OTQyMA==&mid=2247484686&idx=1&sn=1ae16db530cf62e51a3d0b0923927846&chksm=cfca787df8bdf16b462e9c65aa3357797baf5d1869d54363f7502b7c00f69e803a0612ef7a05&scene=21#wechat_redirect) 中 **压缩传输** 部分。
+​     参数说明：**该参数表示生产端是否要对消息进行压缩，默认值为不压缩(none)。**压缩可以显著减少网络IO传输、磁盘IO以及磁盘空间，从而提升整体吞吐量，但也是以牺牲CPU开销为代价的。
 
 ​     调优建议：出于提升吞吐量的考虑，建议在生产端对消息进行压缩。**对于Kafka来说，综合考虑吞吐量与压缩比，建议选择lz4压缩。如果追求最高的压缩比则推荐zstd压缩。**
 
