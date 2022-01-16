@@ -312,13 +312,82 @@ Log Compaction 可以类比 Redis 中的 RDB 的持久化模式。我们可以�
 
 除了消息顺序追加写日志、PageCache 以外， Kafka 还使用了零拷贝（Zero-Copy）技术来进一步提升系统性能， 如下图所示：
 
-![kafka-triHigh-nocopy.png](../../../image/kafka-triHigh-nocopy.png)
+![kafka-triHigh-0-copy.png](../../../image/kafka-triHigh-0-copy.png)
+
+
+
+#### 磁盘存储写入
+
+![kafka-store-broker-write.png](../../../image/kafka-store-broker-write.png)
+
+  
+
+1)、Clients 发送请求给 Acceptor 线程。
+
+2)、Processor 线程处理请求，并放入请求队列
+
+3)、I/O 线程 处理请求。
+
+4)、KafkaRequestHandler 线程将 Response 放入 Processor 线程的 Response 队列
+
+5)、Processor 线程发送 Response 给 Request 发送方；
+
+
+
+实现网络通信的关键部件分别是**Acceptor 线程**和**Processor 线程, IO 线程, **
+
+它们分工明确, 各司其职, 充分解耦, 每个部分都能超高效的处理网络消息请求,从而整体达到超高并发性能要求。
+
+ 1)、**Acceptor 线程：**这是接收和创建外部 TCP 连接的线程。每个 SocketServer 实例只会创建一个 Acceptor 线程。它的唯一目的就是创建连接，并将接收到的 Request 传递给下游的 Processor 线程处理。
+
+2)、**Processor 线程：**这是处理单个 TCP 连接上所有请求的线程。每个 SocketServer 实例默认创建 num.network.threads(默认为3) 个Processor 线程。Processor 线程负责将接收到的 Request 添加到 RequestChannel 的 Request 队列上，同时还负责将 Response 返还给 Request 发送方。
+
+3)、经典的 Reactor 模式有个 Dispatcher 的角色，接收外部请求并分发给下面的实际处理线程。**在 Kafka 中，这个 Dispatcher 就是 Acceptor 线程**。
+
+4)、Acceptor 线程在初始化时，需要创建对应的网络 Processor 线程池。这说明 **Processor 线程是在 Acceptor 线程中管理和维护的**。那它就必须要定义相关的方法。Acceptor 源码中，提供了 3 个与 Processor 相关的方法，**分别是 addProcessors、startProcessors 和 removeProcessors**
+
+5)、**Acceptor 线程逻辑的其实是 run 方法，它是处理 Reactor 模式中分发逻辑的主要实现方法。**这块在后续源码分析篇会详细介绍
+
+6)、Acceptor 线程使用 Java NIO 的 Selector + SocketChannel 的方式循环地轮询准备就绪的 I/O 事件。其中这里的 I/O 事件主要是指网络连接创建事件，即源码中的 SelectionKey.OP_ACCEPT。一旦接收到外部连接请求，Acceptor 就会指定一个 Processor 线程，并将该请求交由它，让它创建真正的网络连接。总的来说，Acceptor 线程就做这么点事。
+
+7)、Processor 是真正创建连接以及分发请求的地方。它要做的事情远比 Acceptor 要多得多, 每个 Processor 线程在创建时都会创建 3 个队列,
+
+  **newConnections** (主要保存创建的新连接信息), 
+
+  **inflightResponses** (这是一个临时 Response 队列。当 Processor 线程将 Response 返还给 Request 发送方之后，还要将 Response 放入这个临时队列, 为什么要存在这个临时队列呢? 这是因为有些 Response 回调逻辑要在 Response 被发送回发送方之后，才能执行，因此需要暂存在一个临时队列里面。这就是 inflightResponses 存在的意义),
+
+  **responseQueue** (这是 Response 队列：每个 Processor 线程都会维护自己的 Response 队列，Response 队列里面保存着需要被返还给发送方的所有 Response 对象。**需要注意的是：Request队列是共享的，而response队列是某个Processor线程专享的，并不是每个线程都需要有响应的**。)
+
+
+
+**这里简要总结一下：**
+
+1)、接收分发请求主要由SocketServer 组件下的 Acceptor 和 Processor 线程处理。
+
+2)、SocketServer 实现了 Reactor 模式，用于高性能地并发处理 I/O 请求。
+
+3)、SocketServer 底层使用了 Java 的 Selector 实现 NIO 通信。
+
+------
 
 一条消息写入磁盘的整体过程如下图所示：
 
 ![kafka-store-log-write.png](../../../image/kafka-store-log-write.png)
 
 
+1)、LoggerManager对象：这是日志管理器, 主要管理Log对象, 以及LogSegment日志分段对象。
+
+2)、Log对象: 每个 replica 会对应一个 log 对象，log 对象是管理当前分区的一个单位，它会包含这个分区的所有 segment 文件（包括对应的 offset 索引和时间戳索引文件），它会提供一些增删查的方法。 
+
+3)、日志写入: 在 Log 中一个重要的方法就是日志的写入方法。Server 将每个分区的消息追加到日志中时，是以 segment 为单位的，当 segment 的大小到达阈值大小之后，会滚动新建一个日志分段（segment）保存新的消息，而分区的消息总是追加到最新的日志分段中。
+
+4)、日志分段:在 Log 的 append() 方法中，会调用 maybeRoll() 方法来判断是否需要进行相应日志分段操作, 如果需要会对日志进行分段存储。
+
+5)、offset 索引文件: 在 Kafka 的索引文件中有这样的特点,**主要采用绝对偏移量+相对偏移量 的方式进行存储的**，每个 segment 最开始绝对偏移量也是其基准偏移量, 另外**数据文件每隔一定的大小创建一个索引条目**，而不是每条消息会创建索引条目，**通过 index.interval.bytes 来配置，默认是 4096，也就是4KB**。
+
+6)、**LogSegment 写入:** 真正的日志写入，还是在 LogSegment 的 append() 方法中完成的，LogSegment 会跟 Kafka 最底层的文件通道、mmap 打交道, 利用OS Cache和零拷贝技术,基于**磁盘顺序写**的方式来进行落盘的, 即将数据追加到文件的末尾,实现高效存储。 
+
+7)、存储机制: 可以先看下[kafka-基础认识.md](kafka-基础认识.md) 中的存储机制部分, 存储格式如上图所示。
 
 ### 总结
 
