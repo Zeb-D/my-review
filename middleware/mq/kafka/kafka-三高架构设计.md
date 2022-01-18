@@ -174,6 +174,40 @@ Producer、Broker、Consumer 要使用相同的压缩算法, 在 Producer 向 Br
 
 <img src="../../../image/kafka-triHigh-oscache-disk.png" alt="kafka-triHigh-oscache-disk.png" style="zoom:50%;" />
 
+使用Page Cache的好处如下
+
+- I/O Scheduler会将连续的小块写组装成大块的物理写从而提高性能
+- I/O Scheduler会尝试将一些写操作重新按顺序排好，从而减少磁盘头的移动时间
+- 充分利用所有空闲内存（非JVM内存）。如果使用应用层Cache（即JVM堆内存），会增加GC负担
+- 读操作可直接在Page Cache内进行。如果消费和生产速度相当，甚至不需要通过物理磁盘（直接通过Page Cache）交换数据
+- 如果进程重启，JVM内的Cache会失效，但Page Cache仍然可用
+
+```markdown
+小块写--->大块写
+写操作按顺序排好
+利用所有空闲内存
+读操作可直接在Page Cache内进行(不是JVM内存)
+```
+
+Broker收到数据后，写磁盘时只是将数据写入Page Cache，并不保证数据一定完全写入磁盘。
+
+从这一点看，可能会造成机器宕机时，Page Cache内的数据未写入磁盘从而造成数据丢失。
+
+但是这种丢失只发生在机器断电等造成操作系统不工作的场景，而这种场景完全可以由Kafka层面的Replication机制去解决。
+
+如果为了保证这种情况下数据不丢失而强制将Page Cache中的数据Flush到磁盘，反而会降低性能。
+
+也正因如此，Kafka虽然提供了`flush.messages`和`flush.ms`两个参数将Page Cache中的数据强制Flush到磁盘，但是Kafka并不建议使用。
+
+```markdown
+断电会导致Page Cache数据丢失
+可设置采用Flush到磁盘，但影响性能
+```
+
+如果数据消费速度与生产速度相当，甚至不需要通过物理磁盘交换数据，而是直接通过Page Cache交换数据。
+
+同时，Follower从Leader Fetch数据时，也可通过Page Cache完成。
+
 
 
 #### 零拷贝技术(zero-copy)
@@ -185,6 +219,16 @@ Producer、Broker、Consumer 要使用相同的压缩算法, 在 Producer 向 Br
 1) 先检查要读取的数据是否在 os cache 中, 如果不在的话就从磁盘文件读取数据后放入 os cache。
 
 2) 接着从 os cache 里面 copy 数据到应用程序进程的缓存里面, 在从应用程序进程的缓存里 copy 数据到操作系统层面的 socket缓存里面, 最后再从 socket 缓存里面读取数据后发送到网卡, 最后从网卡发送到下游的消费者。
+
+> 上图实际上发生了四次数据拷贝。
+>
+> 首先通过系统调用将**文件数据**读入到**内核态Buffer**（DMA拷贝），
+>
+> 然后**应用程序**将内存态Buffer数据读入到**用户态Buffer**（CPU拷贝），
+>
+> 接着用户程序通过Socket发送数据时将用户态Buffer数据拷贝到**内核态Buffer（**CPU拷贝），
+>
+> 最后通过DMA拷贝将数据拷贝到**NIC Buffer**(网卡缓冲)。同时，还伴随着四次上下文切换；
 
 kafka 为了解决这个问题, 在读取数据的时候就引入了**零拷贝技术**。
 
@@ -202,7 +246,7 @@ kafka 为了解决这个问题, 在读取数据的时候就引入了**零拷贝�
 
 2) copy-on-write: 写时复制, 数据不需要提前进行拷贝, 而是在当需要修改的时候再进行部分数据的拷贝
 
-这里, Kafka 主要使用到了 **mmap** 和 **sendfile** 的方式来实现零拷贝, 对应java里面的 MappedByteBuffer 和 FileChannel.transferIO。(unsafte类)
+这里, Kafka 主要使用到了 **mmap** 和 **sendfile** 的方式来实现零拷贝，具体实现是Kafka的数据传输通过TransportLayer来完成，其子类`PlaintextTransportLayer`通过Java NIO的 MappedByteBuffer 和 FileChannel.transferIO。(unsafte类)
 
 使用 java NIO 实现的 **零拷贝,** 如下：
 
@@ -214,6 +258,20 @@ kafka 为了解决这个问题, 在读取数据的时候就引入了**零拷贝�
 transferTo() 方法会将数据从文件通道传输到了给定的可写字节通道。
 
 在其内部它依赖底层操作系统对零拷贝的支持；在 Linux 系统中，此调用被传递到 sendfile() 系统调用中；
+
+> **注：** `transferTo`和`transferFrom`并不保证一定能使用零拷贝。
+>
+> 实际上是否能使用零拷贝与操作系统相关，如果操作系统提供`sendfile`这样的零拷贝系统调用，则这两个方法会通过这样的系统调用充分利用零拷贝的优势，否则并不能通过这两个方法本身实现零拷贝。
+
+
+
+#### 支持多Disk Drive
+
+Broker的`log.dirs`配置项，允许配置多个文件夹。
+
+如果机器上有多个Disk Drive，可将不同的Disk挂载到不同的目录，然后将这些目录都配置到`log.dirs`里。
+
+Kafka会尽可能将不同的Partition分配到不同的目录，也即不同的Disk上，从而充分利用了多Disk的优势。
 
 
 

@@ -183,7 +183,7 @@ Kafka之所以要在 Broker 0 上保存这些所有 Follower 副本, 就是为�
 
 那么此时 Follower 自身 HW 的值如何确定，即 **Follower获取数据时也会带上 Leader Partition 的 HW 的值，然后和自身的 LEO 值取一个较小的值作为自身的 HW 值** 。
 
-![kafka-broker-partition-HW&LEO-update .png](../../../image/kafka-broker-partition-HW&LEO-update .png)
+![kafka-broker-partition-HW&LEO-update.png](../../../image/kafka-broker-partition-HW&LEO-update .png)
 
 
 
