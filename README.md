@@ -1,47 +1,48 @@
 # my-review
-
-主要存放平时理论学习，比如java jdk源码分析、并发理论；数据库、Linux、中间件、分布式等方向；均以各个目录命名；迫不及待的小伙伴可以去进去相互学习；
-
+IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪里！
 
 
-[![知识共享协议（CC协议）](https://img.shields.io/badge/License-Creative%20Commons-DC3D24.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh)
-[![GitHub stars](https://img.shields.io/github/stars/Zeb-D/my-review.svg?style=flat&label=Star)](https://github.com/Zeb-D/my-review/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/Zeb-D/my-review.svg?style=flat&label=Fork)](https://github.com/Zeb-D/my-review/fork)
-[![GitHub watchers](https://img.shields.io/github/watchers/Zeb-D/my-review.svg?style=flat&label=Watch)](https://github.com/Zeb-D/my-review/watchers)
 
-[![文档完成率](http://progressed.io/bar/012)](https://github.com/Zeb-D/my-review)
+[![知识共享协议（CC协议）](https://img.shields.io/badge/License-Creative%20Commons-DC3D24.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh)[![GitHub stars](https://img.shields.io/github/stars/Zeb-D/my-review.svg?style=flat&label=Star)](https://github.com/Zeb-D/my-review/stargazers)[![GitHub forks](https://img.shields.io/github/forks/Zeb-D/my-review.svg?style=flat&label=Fork)](https://github.com/Zeb-D/my-review/fork)[![GitHub watchers](https://img.shields.io/github/watchers/Zeb-D/my-review.svg?style=flat&label=Watch)](https://github.com/Zeb-D/my-review/watchers)
 
 ------
 
-### 大致引导
+### 各知识点目录图
 
-这是具体的一些**目录图**，完成率为![完成率](http://progressed.io/bar/100)
+* [数据存储](https://github.com/Zeb-D/my-review/blob/master/db) 不只是数据库，更多的是数据存储
+	* [HBase](https://github.com/Zeb-D/my-review/blob/master/db/hbase)
+	* [MySQL](https://github.com/Zeb-D/my-review/blob/master/db/mysql)
+	* [Redis](https://github.com/Zeb-D/my-review/blob/master/db/redis)
+	* [tidb](https://github.com/Zeb-D/my-review/blob/master/db/tidb)
+	* [SQL练习题](https://github.com/Zeb-D/my-review/blob/master/db/sql之练习题.md)
+* [分布式](https://github.com/Zeb-D/my-review/blob/master/distributtion) 存放了各个分布式理论知识
+* [GoLang](https://github.com/Zeb-D/my-review/blob/master/go) 职业上第二门语言
+* [Java](https://github.com/Zeb-D/my-review/blob/master/java)
+	* [Java设计模式](https://github.com/Zeb-D/my-review/blob/master/java/java-design) 23种设计模式
+	* [jdk源码分析](https://github.com/Zeb-D/my-review/blob/master/java/jdk源码分析)
+	* [jvm](https://github.com/Zeb-D/my-review/blob/master/java/jvm)
+	* [spring](https://github.com/Zeb-D/my-review/blob/master/java/spring)
+	* [spring-boot](https://github.com/Zeb-D/my-review/blob/master/java/spring-boot)
+* [kubernetes](https://github.com/Zeb-D/my-review/blob/master/kubernetes) 从0到1，再深入到N
+* [linux](https://github.com/Zeb-D/my-review/blob/master/linux)
+* [管理](https://github.com/Zeb-D/my-review/blob/master/manage) 管理之路尚在脚下
+* [中间件](https://github.com/Zeb-D/my-review/blob/master/middleware) 
+	* [Elasticsearch](https://github.com/Zeb-D/my-review/blob/master/middleware/es)
+	* [负载均衡](https://github.com/Zeb-D/my-review/blob/master/middleware/loadbannce)
+	* [消息队列](https://github.com/Zeb-D/my-review/blob/master/middleware/mq)
+		* [kafka](https://github.com/Zeb-D/my-review/blob/master/middleware/mq/kafka)
+	* [netty](https://github.com/Zeb-D/my-review/blob/master/middleware/netty) NIO突出者
+	* [rpc](https://github.com/Zeb-D/my-review/blob/master/middleware/rpc) 跨进程的相关框架
+	    * [dubbo](https://github.com/Zeb-D/my-review/blob/master/middleware/rpc/dubbo)
+	* [zookeeper](https://github.com/Zeb-D/my-review/blob/master/middleware/zk)
+* [网络协议](https://github.com/Zeb-D/my-review/blob/master/network)
+* [工具](https://github.com/Zeb-D/my-review/blob/master/tool)
 
-- db 主要存放存储方面的自我学习与研究
-- --[mysql](https://github.com/Zeb-D/my-review/blob/master//db/mysql)
-- --[redis](https://github.com/Zeb-D/my-review/blob/master/db/redis)
-- interview 面试小题库（个人部分积累）以上会发些大厂的，现在还在自己的小本本上
-- java 目前本命语言的专研
-- --[jdk源码分析](https://github.com/Zeb-D/my-review/blob/master/java/jdk源码分析)
-- --[jvm](https://github.com/Zeb-D/my-review/blob/master/java/jvm)
-- --[spring](https://github.com/Zeb-D/my-review/blob/master/java/spring)
-- --[spring-boot](https://github.com/Zeb-D/my-review/blob/master/java/spring-boot)
-- linux 这里会研究下linux的内核或者协议
-- tool 学习中值得存放的工具
-- 中间件 这里会是一些中间件，当然有些框架也能称得上
-- --[es](https://github.com/Zeb-D/my-review/blob/master/middleware/es) 一般存放一些搜索引擎，不单单是es
-- --[loadbannce](https://github.com/Zeb-D/my-review/blob/master/middleware/loadbannce) 负载均衡
-- --[netty](https://github.com/Zeb-D/my-review/blob/master/middleware/netty)
-- --[rpc](https://github.com/Zeb-D/my-review/blob/master/middleware/rpc) 框架那么多，所以不只有dubbo，也可能是HSF
-- --[zk](https://github.com/Zeb-D/my-review/blob/master/middleware/zk)
-- --[消息队列](https://github.com/Zeb-D/my-review/blob/master/middleware/mq)
-- [分布式](https://github.com/Zeb-D/my-review/blob/master/分布式)
-- [网络协议](https://github.com/Zeb-D/my-review/blob/master/网络协议) 本应该放到linux的，但放到这里
-- [middleware-design](https://github.com/Zeb-D/my-review/blob/master/middleware-design) 这里将是带领大家实现有价值的中间件或者组件
+`image`专门存放图片，命名格式以最后一个目录为前缀(markdown所有package)
 
 <br>
 
-### 详细引导
+### 阅读提醒
 
 #### 打开方式引导
 
@@ -51,9 +52,9 @@
 
 当前有 chrome 插件支持GitHub ，有个目录导航栏，该插件名称大概是`Octotree`(是不是学习效率又提高了...)
 
-#### 文章导航
+### 文章内容
 
-这里可能不太会时常更新，主要有点多，完成率为![完成率](http://progressed.io/bar/001)
+经过了消化后进行整理，从个人学习笔记到这不太会时常更新，主要有点多，不会太及时与各个目录同步，在此邀请各个志者一起参与；
 
 
 
@@ -69,10 +70,6 @@
 
 ##### 额外（**可忽略**）：
 
-分享个红包分享二维码，赚点零花钱；
-
-![hb](./image/hb.png)
-
-分享个人支付二维码，在自我学习的路上（搬砖）有鲜活的动力，注意：大金额的，我不需要，只是想这种方式，来看自己的知识与收益数量的对比，量力而行！
+分享个人支付二维码，在自我学习的路上（搬砖）有鲜活的动力，只是想这种方式，来看自己的知识与收益数量的对比，量力而行！（注意：大金额的，我不需要）
 
 ![hb](./image/myalipayQR.png)

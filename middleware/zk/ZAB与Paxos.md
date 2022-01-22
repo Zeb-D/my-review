@@ -6,9 +6,9 @@
 
 ### 背景
 
-学习了一些分布式理论，特别是一些围绕着[cap理论](../../分布式/分布式系统的BASE理论.md)的三大特性的算法，重点学习了zk上的[ZAB协议]()
+学习了一些分布式理论，特别是一些围绕着[cap理论](../../distributtion/分布式系统的BASE理论.md)的三大特性的算法，重点学习了zk上的[ZAB协议]()
 
-和少数服从多数算法[PAXOS算法](../../分布式/什么是PAXOS.md),当然还有其它算法不在这里讨论如raft，包括数据一致性算法如[Quorum 和Clock 算法](../../分布式/集群内数据一致性的算法.md) 接下来初步总结下ZAB和Paxos学习感受：
+和少数服从多数算法[PAXOS算法](../../distributtion/什么是PAXOS.md),当然还有其它算法不在这里讨论如raft，包括数据一致性算法如[Quorum 和Clock 算法](../../distributtion/集群内数据一致性的算法.md) 接下来初步总结下ZAB和Paxos学习感受：
 
 ### ZAB 和 Paxos
 
