@@ -1,6 +1,6 @@
 # my-review
 IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪里！
-
+让我们一起 :thumbsup: :thumbsup: :thumbsup:<b style="color:red">Star勉励吧</b>
 
 
 [![知识共享协议（CC协议）](https://img.shields.io/badge/License-Creative%20Commons-DC3D24.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh)[![GitHub stars](https://img.shields.io/github/stars/Zeb-D/my-review.svg?style=flat&label=Star)](https://github.com/Zeb-D/my-review/stargazers)[![GitHub forks](https://img.shields.io/github/forks/Zeb-D/my-review.svg?style=flat&label=Fork)](https://github.com/Zeb-D/my-review/fork)[![GitHub watchers](https://img.shields.io/github/watchers/Zeb-D/my-review.svg?style=flat&label=Watch)](https://github.com/Zeb-D/my-review/watchers)
@@ -38,7 +38,7 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 * [网络协议](https://github.com/Zeb-D/my-review/blob/master/network)
 * [工具](https://github.com/Zeb-D/my-review/blob/master/tool)
 
-`image`专门存放图片，命名格式以最后一个目录为前缀(markdown所有package)
+`image`专门存放图片，命名格式以最后一个目录名为前缀(markdown所在package,图片名尽量不中文)
 
 <br>
 
@@ -65,7 +65,7 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 
 
 ------
-
+##### ：
 
 
 ##### 额外（**可忽略**）：
