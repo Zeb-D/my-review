@@ -8,7 +8,7 @@
 
 有好几次进行业务coding需要使用到一些c使用，接触后发现，比java耦合c更方便快捷；
 
-对此我们开始由浅入深的研究下cgo与c如何在go中运用；
+对此我们开始由浅入深的研究下cgo与c如何在go中运用，部分可见[测试代码](https://github.com/Zeb-D/go-util/tree/master/todo/main/cgo/main)；
 
 
 
