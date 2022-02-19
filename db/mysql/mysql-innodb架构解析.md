@@ -44,8 +44,7 @@ mysql的InnoDB存储引擎架构，包括了内存架构和磁盘架构两部分
 
 ​    了解如何利用缓冲池将频繁访问的数据保存在内存中，是MySQL调优的一个重要方面。
 
-<img src="../../image/mysql-innodb-buffer-poll.png" alt="mysql-innodb-buffer-poll.png" style="zoom:75%;" />
-
+![mysql-innodb-buffer-poll.png](../../image/mysql-innodb-buffer-poll.png)
 ﻿
 
 
@@ -56,8 +55,7 @@ mysql的InnoDB存储引擎架构，包括了内存架构和磁盘架构两部分
 
 ﻿
 
-<img src="../../image/mysql-innodb-buffer-update.png" alt="mysql-innodb-buffer-update.png" style="zoom:75%;" />
-
+![mysql-innodb-buffer-update.png](../../image/mysql-innodb-buffer-update.png)
 
 
 #### 自适应hash索引
@@ -199,7 +197,7 @@ redo日志在存储体现上也由两部分组成：
 
 另外，undo还有一个作用，就是在MVCC中提供快照。这需要借助一个名为history list的结构，把undo log组织成一个链表：
 
-<img src="../../image/mysql-undo-history.png" alt="mysql-undo-history.png" style="zoom:80%;" />
+![mysql-undo-history.png](../../image/mysql-undo-history.png)
 
 
 

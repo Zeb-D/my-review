@@ -35,7 +35,7 @@ Raft 不允许类似 Paxos 中的乱序提交、简化系统中的角色状态�
 - Leader 负责主动与所有 Followers 通信，负责将“提案”发送给所有 Followers，同时收集多数派的 Followers 应答；
 - Leader 还需向所有 Followers 主动发送心跳维持领导地位(保持存在感)。
 
-![img](../image/Strong Leader.png)
+![img](../image/Strong-Leader.png)
 
 ### 基本概念
 
@@ -59,7 +59,7 @@ Raft 不允许类似 Paxos 中的乱序提交、简化系统中的角色状态�
 2. 每一个任期的开始都是 Leader 选举，选举成功之后，Leader 在任期内管理整个集群，也就是 **“选举 + 常规操作”**；
 3. 每个任期最多一个 Leader，可能没有 Leader (spilt-vote 导致)。
 
-![img](../image/Leader term.png)
+![img](../image/Leader-term.png)
 
 ### 延伸
 
@@ -137,7 +137,7 @@ SOFAJRaft 是从百度的 [braft](https://link.juejin.im?target=https%3A%2F%2Fgi
 
 这里挑重点介绍几个优化点：
 
-\1. Batch： 我们知道互联网两大优化法宝便是 Cache 和 Batch，SOFAJRaft 在 Batch 上花了较大心思，整个链路几乎都是 Batch 的，依靠 disruptor 的 MPSC 模型批量消费，对整体性能有着极大的提升，包括但不限于：
+1. Batch： 我们知道互联网两大优化法宝便是 Cache 和 Batch，SOFAJRaft 在 Batch 上花了较大心思，整个链路几乎都是 Batch 的，依靠 disruptor 的 MPSC 模型批量消费，对整体性能有着极大的提升，包括但不限于：
 
 - 批量提交 task
 
@@ -151,11 +151,11 @@ SOFAJRaft 是从百度的 [braft](https://link.juejin.im?target=https%3A%2F%2Fgi
 
 - 需要说明的是，虽然 SOFAJRaft 中大量使用了 Batch 技巧，但对单个请求的延时并无任何影响，SOFAJRaft 中不会对请求做延时的攒批处理。
 
-\2. Replication pipeline：流水线复制，通常 Leader 跟 Followers 节点的 Log 同步是串行 Batch 的方式，每个 Batch 发送之后需要等待 Batch 同步完成之后才能继续发送下一批(ping-pong)，这样会导致较长的延迟。SOFAJRaft 中通过 Leader 跟 Followers 节点之间的 pipeline 复制来改进，非常有效降低了数据同步的延迟，提高吞吐。经我们测试，开启 pipeline 可以将吞吐提升 30% 以上，详细数据请参照 Benchmark。
+2. Replication pipeline：流水线复制，通常 Leader 跟 Followers 节点的 Log 同步是串行 Batch 的方式，每个 Batch 发送之后需要等待 Batch 同步完成之后才能继续发送下一批(ping-pong)，这样会导致较长的延迟。SOFAJRaft 中通过 Leader 跟 Followers 节点之间的 pipeline 复制来改进，非常有效降低了数据同步的延迟，提高吞吐。经我们测试，开启 pipeline 可以将吞吐提升 30% 以上，详细数据请参照 Benchmark。
 
-\3. Append log in parallel：在 SOFAJRaft 中 Leader 持久化 log entries 和向 Followers 发送 log entries 是并行的。
+3. Append log in parallel：在 SOFAJRaft 中 Leader 持久化 log entries 和向 Followers 发送 log entries 是并行的。
 
-\4. Fully concurrent replication：Leader 向所有 Follwers 发送 Log 也是完全相互独立和并发的。
+4. Fully concurrent replication：Leader 向所有 Follwers 发送 Log 也是完全相互独立和并发的。
 
 - Asynchronous：SOFAJRaft 中整个链路几乎没有任何阻塞，完全异步的，是一个完全的 callback 编程模型。
 - ReadIndex：优化 Raft read 走 Raft log 的性能问题，每次 read，仅记录 commitIndex，然后发送所有 peers heartbeat 来确认 Leader 身份，如果 Leader 身份确认成功，等到 appliedIndex >= commitIndex，就可以返回 Client read 了，基于 ReadIndex Follower 也可以很方便的提供线性一致读，不过 commitIndex 是需要从 Leader 那里获取，多了一轮 RPC；关于线性一致读文章后面会详细分析。
