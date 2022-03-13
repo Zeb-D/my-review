@@ -49,15 +49,15 @@ vm.lowmem_reserve_ratio = 256   256 32
 
 这个查询结果22M的需要25秒，如下图（wireshark 时序图），横轴是时间，纵轴是sequence
 
-<img src="../image/tpc-net-trans-all.png" alt="tpc-net-trans-all" style="zoom:50%;" />
+![tcp-net-send-seq](../image/tpc-net-trans-all.png)
 
 粗一看没啥问题，因为时间太长掩盖了问题。把这个图形放大，就看中间50ms内的传输情况（横轴是时间，纵轴是sequence number，一个点代表一个包）。
 
-<img src="../image/tcp-net-trans-detail.png" style="zoom:75%;" />
+![tcp-net-send-seq](../image/tcp-net-trans-detail.png)
 
 换个角度，看看窗口尺寸图形：
 
-<img src="../image/tcp-net-trans-window.png" alt="tcp-net-trans-window" style="zoom:80%;" />
+![tcp-net-send-seq](../image/tcp-net-trans-window.png)
 
 从bytes in flight也大致能算出来总的传输时间 16K*1000/20=800Kb/秒
 
