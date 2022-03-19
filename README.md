@@ -62,6 +62,7 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 	* [tidb](https://github.com/Zeb-D/my-review/blob/master/db/tidb)
 		* [tidb数据库隔离级别剖析](https://github.com/Zeb-D/my-review/blob/master/db/tidb/tidb数据库隔离级别剖析.md)
 	* [SQL练习题](https://github.com/Zeb-D/my-review/blob/master/db/sql之练习题.md)
+------
 * [分布式](https://github.com/Zeb-D/my-review/blob/master/distributtion) 存放了各个分布式理论知识
 	* [Java中的全局事务与本地事务](https://github.com/Zeb-D/my-review/blob/master/distributtion/Java中的全局事务与本地事务.md)
 	* [分布式session一致性](https://github.com/Zeb-D/my-review/blob/master/distributtion/分布式session一致性.md)
@@ -76,6 +77,7 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 	* [什么是Raft](https://github.com/Zeb-D/my-review/blob/master/distributtion/什么是Raft.md)
 	* [什么是PAXOS](https://github.com/Zeb-D/my-review/blob/master/distributtion/什么是PAXOS.md)
 	* [分布式系统的一致性](https://github.com/Zeb-D/my-review/blob/master/distributtion/分布式系统的一致性.md)
+------
 * [GoLang](https://github.com/Zeb-D/my-review/blob/master/go) 职业上第二门语言
 	* [grpc-go超时传递原理](https://github.com/Zeb-D/my-review/blob/master/go/grpc-go超时传递原理.md)
 	* [go的逃逸分析](https://github.com/Zeb-D/my-review/blob/master/go/go的逃逸分析.md)
@@ -91,6 +93,7 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 	* [go深入学习cgo与c](https://github.com/Zeb-D/my-review/blob/master/go/go深入学习cgo与c.md)
 	* [核心原理-golang-runtime](https://github.com/Zeb-D/my-review/blob/master/go/核心原理-golang-runtime.md)
 	* [核心原理-协程栈](https://github.com/Zeb-D/my-review/blob/master/go/核心原理-协程栈.md)
+------
 * [Java](https://github.com/Zeb-D/my-review/blob/master/java)
 	* [Java设计模式](https://github.com/Zeb-D/my-review/blob/master/java/java-design) 23种设计模式
 		* [设计模式六大设计原则](https://github.com/Zeb-D/my-review/blob/master/java/java-design/设计模式六大设计原则.md)
@@ -131,6 +134,7 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 	* [spring-boot](https://github.com/Zeb-D/my-review/blob/master/java/spring-boot)
 		* [Eureka和Zookeeper比较](https://github.com/Zeb-D/my-review/blob/master/java/spring-boot/Eureka和Zookeeper比较.md)
 		* [自定义自动配置springboot-starter](https://github.com/Zeb-D/my-review/blob/master/java/spring-boot/自定义自动配置springboot-starter.md)
+------
 * [kubernetes](https://github.com/Zeb-D/my-review/blob/master/kubernetes) 从0到1，再深入到N
 	* [00-怎么实现容器技术的提问](https://github.com/Zeb-D/my-review/blob/master/kubernetes/00-怎么实现容器技术的提问.md)
 	* [01-容器兴起的缘由](https://github.com/Zeb-D/my-review/blob/master/kubernetes/01-容器兴起的缘由.md)
@@ -148,6 +152,7 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 	* [13-PV与PVC](https://github.com/Zeb-D/my-review/blob/master/kubernetes/13-PV与PVC.md)
 	* [README](https://github.com/Zeb-D/my-review/blob/master/kubernetes/README.md)
 	* [kubernetes--核心概念介绍](https://github.com/Zeb-D/my-review/blob/master/kubernetes/kubernetes--核心概念介绍.md)
+------
 * [linux](https://github.com/Zeb-D/my-review/blob/master/linux)
 	* [2》&1](https://github.com/Zeb-D/my-review/blob/master/linux/2》&1.md)
 	* [CPU Cache 深入分析](https://github.com/Zeb-D/my-review/blob/master/linux/CPU-Cache深入分析.md)
@@ -157,6 +162,7 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 	* [操作系统的内核态和用户态](https://github.com/Zeb-D/my-review/blob/master/linux/操作系统的内核态和用户态.md)
 	* [查看服务器性能负载之命令](https://github.com/Zeb-D/my-review/blob/master/linux/查看服务器性能负载之命令.md)
 	* [超线程之分析](https://github.com/Zeb-D/my-review/blob/master/linux/超线程之分析.md)
+------
 * [管理](https://github.com/Zeb-D/my-review/blob/master/manage) 管理之路尚在脚下
 	* [ToB 服务的交付能力优化](https://github.com/Zeb-D/my-review/blob/master/manage/ToB服务的交付能力优化.md)
 	* [你为什么离职](https://github.com/Zeb-D/my-review/blob/master/manage/你为什么离职.md)
@@ -169,6 +175,7 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 	* [站在团队角度看研发效能](https://github.com/Zeb-D/my-review/blob/master/manage/站在团队角度看研发效能.md)
 	* [自我成长与团队管理](https://github.com/Zeb-D/my-review/blob/master/manage/自我成长与团队管理.md)
 	* [项目管理常用的七大工具](https://github.com/Zeb-D/my-review/blob/master/manage/项目管理常用的七大工具.md)
+------
 * [中间件](https://github.com/Zeb-D/my-review/blob/master/middleware) 
 	* [Elasticsearch](https://github.com/Zeb-D/my-review/blob/master/middleware/es)
 		* [ElasticSearch之入门解释](https://github.com/Zeb-D/my-review/blob/master/middleware/es/ElasticSearch之入门解释.md)
@@ -202,6 +209,7 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 		* [ZAB与Paxos](https://github.com/Zeb-D/my-review/blob/master/middleware/zk/ZAB与Paxos.md)
 		* [ZAB协议](https://github.com/Zeb-D/my-review/blob/master/middleware/zk/ZAB协议.md)
 		* [zk——你知道的zk是这样的吗](https://github.com/Zeb-D/my-review/blob/master/middleware/zk/zk——你知道的zk是这样的吗.md)
+------
 * [网络协议](https://github.com/Zeb-D/my-review/blob/master/network)
 	* [C10K与C1MK](https://github.com/Zeb-D/my-review/blob/master/network/C10K与C1MK.md)
 	* [Cookie与Session深入研究](https://github.com/Zeb-D/my-review/blob/master/network/Cookie与Session深入研究.md)
