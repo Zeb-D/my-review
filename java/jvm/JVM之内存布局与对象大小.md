@@ -87,7 +87,7 @@ OOP的全称为：Ordinary Object Pointer，就是普通对象指针。启用Com
 
 ## 查看对象的大小
 
-接下来我们使用[http://www.javamex.com/](https://link.jianshu.com?t=http://www.javamex.com/)中提供的[classmexer.jar](https://link.jianshu.com?t=http://www.javamex.com/classmexer/classmexer-0_03.zip)来计算对象的大小。
+接下来我们使用[http://www.javamex.com/](http://www.javamex.com/)中提供的[classmexer.jar](http://www.javamex.com/classmexer/classmexer-0_03.zip)来计算对象的大小。
 
 运行环境：JDK 1.8，Java HotSpot(TM) 64-Bit Server VM
 
