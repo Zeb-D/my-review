@@ -6,8 +6,31 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 [![知识共享协议（CC协议）](https://img.shields.io/badge/License-Creative%20Commons-DC3D24.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh)[![GitHub stars](https://img.shields.io/github/stars/Zeb-D/my-review.svg?style=flat&label=Star)](https://github.com/Zeb-D/my-review/stargazers)[![GitHub forks](https://img.shields.io/github/forks/Zeb-D/my-review.svg?style=flat&label=Fork)](https://github.com/Zeb-D/my-review/fork)[![GitHub watchers](https://img.shields.io/github/watchers/Zeb-D/my-review.svg?style=flat&label=Watch)](https://github.com/Zeb-D/my-review/watchers)
 
 ------
+### 系统性学习路上
+欢迎各位有志者一起勉行！
 
-### 各知识点目录图
+文件格式：
+
+`image`专门存放图片，命名格式以最后一个目录名为前缀(markdown所在package,图片名出现中文及空格)；
+
+学习的md文件尽量不要出现空格，因为在README.md文件创建索引会失败；如果有一个系统上学习闭环，可以对这些md文件进行命名排序如01xx、02xx；
+
+建议参与后消化后再输出，这样加深自己的影响，也避免网上`一传百假象`；
+
+
+### 打开方式引导
+
+文档均采用`Typora` MarkDown编辑，故大多数文章使用该编辑器打开，是能体现出目录文档图（对应快捷键为`[TOC]`所以页面见到这关键字也不要怕为什么）
+
+### Chrome 浏览指导
+
+当前有 chrome 插件支持GitHub ，有个目录导航栏，该插件名称大概是`Octotree`(是不是学习效率又提高了...)
+
+
+------
+
+
+### 详细知识列表
 
 * [数据存储](https://github.com/Zeb-D/my-review/blob/master/db) 不只是数据库，更多的是数据存储
 	* [HBase](https://github.com/Zeb-D/my-review/blob/master/db/hbase)
@@ -34,7 +57,7 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 		* [redis之集群运维总结](https://github.com/Zeb-D/my-review/blob/master/db/redis/redis之集群运维总结.md)
 		* [Redis之集群原理分析](https://github.com/Zeb-D/my-review/blob/master/db/redis/Redis之集群原理分析.md)
 		* [redis-4.0引进多线程](https://github.com/Zeb-D/my-review/blob/master/db/redis/redis-4.0引进多线程.md)
-		* [Redis之Vs Memcached](https://github.com/Zeb-D/my-review/blob/master/db/redis/Redis之Vs Memcached.md)
+		* [Redis之Vs Memcached](https://github.com/Zeb-D/my-review/blob/master/db/redis/Redis-Vs-Memcached.md)
 		* [redis持久化方式](https://github.com/Zeb-D/my-review/blob/master/db/redis/redis持久化方式.md)
 	* [tidb](https://github.com/Zeb-D/my-review/blob/master/db/tidb)
 		* [tidb数据库隔离级别剖析](https://github.com/Zeb-D/my-review/blob/master/db/tidb/tidb数据库隔离级别剖析.md)
@@ -128,7 +151,7 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 * [linux](https://github.com/Zeb-D/my-review/blob/master/linux)
 	* [2》&1](https://github.com/Zeb-D/my-review/blob/master/linux/2》&1.md)
 	* [CPU Cache 深入分析](https://github.com/Zeb-D/my-review/blob/master/linux/CPU-Cache深入分析.md)
-	* [awk 入门指南](https://github.com/Zeb-D/my-review/blob/master/linux/awk 入门指南.md)
+	* [awk 入门指南](https://github.com/Zeb-D/my-review/blob/master/linux/awk-入门指南.md)
 	* [crontab](https://github.com/Zeb-D/my-review/blob/master/linux/crontab.md)
 	* [curl使用方式](https://github.com/Zeb-D/my-review/blob/master/linux/curl使用方式.md)
 	* [操作系统的内核态和用户态](https://github.com/Zeb-D/my-review/blob/master/linux/操作系统的内核态和用户态.md)
@@ -194,34 +217,3 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 	* [网络工程-子网划分详解](https://github.com/Zeb-D/my-review/blob/master/network/网络工程-子网划分详解.md)
 	* [网络工程-子网掩码详解](https://github.com/Zeb-D/my-review/blob/master/network/网络工程-子网掩码详解.md)
 * [工具](https://github.com/Zeb-D/my-review/blob/master/tool)
-
-`image`专门存放图片，命名格式以最后一个目录名为前缀(markdown所在package,图片名尽量不中文)
-
-<br>
-
-### 阅读提醒
-
-#### 打开方式引导
-
-文档均采用`Typora`编辑，故大多数文章使用该编辑器打开，是能体现出目录文档图（对应快捷键为`[TOC]`所以页面见到这关键字也不要怕为什么）
-
-#### Chrome 浏览指导
-
-当前有 chrome 插件支持GitHub ，有个目录导航栏，该插件名称大概是`Octotree`(是不是学习效率又提高了...)
-
-### 文章内容
-
-经过了消化后进行整理，从个人学习笔记到这不太会时常更新，主要有点多，不会太及时与各个目录同步，在此邀请各个志者一起参与；
-
-
-
-
-
-
-
-
-
-------
-
-##### 共勉之行：
-欢迎各位有志者一起勉行！
