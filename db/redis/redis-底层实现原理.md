@@ -13,7 +13,7 @@ redis的快除了表面上的内存操作、单线程无竞争，其实底层不
 ```
 docker run -p 6379:6379 -v /data/redis/data:/data:rw --name ydRedis -d redis:4.0.8 redis-server --appendonly yes --protected-mode no --requirepass "yd_redis"
 
-docker exec -it cadmusRedis /bin/bash
+docker exec -it ydRedis /bin/bash
 redis-cli -a yd_redis
 ```
 
@@ -348,7 +348,7 @@ typedef` `struct` `intset{
 
 　　压缩列表是Redis为节省内存而开发的顺序型数据结构，通常作为列表键和哈希键的底层实现之一。
 
-　　以上介绍的简单字符串、链表、字典、跳跃表、整数集合、压缩列表等数据结构就是Redis底层的一些数据结构，用来实现上一篇博客介绍的Redis五大数据类型，那么每种数据类型是由哪些数据结构实现的呢？下一篇博客进行介绍。
+　　以上介绍的简单字符串、链表、字典、跳跃表、整数集合、压缩列表等数据结构就是Redis底层的一些数据结构，用来实现介绍的Redis五大数据类型，那么每种数据类型是由哪些数据结构实现的呢？请继续看。
 
 
 
@@ -467,7 +467,7 @@ list 列表，它是简单的字符串列表，按照插入顺序排序，你可
 
 ##### **①、编码**
 
-　　列表对象的编码可以是 ziplist(压缩列表) 和 linkedlist(双端链表)。 关于链表和压缩列表的特性可以看我前面的[这篇博客](https://www.cnblogs.com/ysocean/p/9080942.html)。
+　　列表对象的编码可以是 ziplist(压缩列表) 和 linkedlist(双端链表)。
 
 　　比如我们执行以下命令，创建一个 key = ‘numbers’，value = ‘1 three 5’ 的三个值的列表。
 
