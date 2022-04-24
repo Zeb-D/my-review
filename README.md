@@ -167,6 +167,7 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 	* [ToB 服务的交付能力优化](https://github.com/Zeb-D/my-review/blob/master/manage/ToB服务的交付能力优化.md)
 	* [你为什么离职](https://github.com/Zeb-D/my-review/blob/master/manage/你为什么离职.md)
 	* [关于技术TL一些感悟](https://github.com/Zeb-D/my-review/blob/master/manage/关于技术TL一些感悟.md)
+	* [关于架构师的一些行为原则](https://github.com/Zeb-D/my-review/blob/master/manage/关于架构师的一些行为原则.md)
 	* [关于绩效考核KPI的一些总结](https://github.com/Zeb-D/my-review/blob/master/manage/关于绩效考核KPI的一些总结.md)
 	* [学习方法论与相关建议](https://github.com/Zeb-D/my-review/blob/master/manage/学习方法论与相关建议.md)
 	* [极简而高效的沟通管理法](https://github.com/Zeb-D/my-review/blob/master/manage/极简而高效的沟通管理法.md)
