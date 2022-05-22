@@ -39,9 +39,9 @@ ssh 方式链接到 Github，需要唯一的公钥，如果想同一台电脑绑
 
 1. 生成新的公钥，并命名为 `id_rsa_2` (保证与之前密钥文件名称不同即可)
 
-- `ssh-keygen -t rsa -f ~/.ssh/id_rsa_2 -C "yourmail@qq.com"`
+- `ssh-keygen -t rsa -f ~/.ssh/id_rsa_2 -C "Zeb-D@qq.com"`
 
-在 `.ssh` 文件夹下新建 `config` 文件并编辑，另不同 Host 实际映射到同一 `HostName`，但密钥文件不同。Host 前缀可自定义，例子中`zouyd`
+在 `.ssh` 文件夹下新建 `config` 文件并编辑，另不同 Host 实际映射到同一 `HostName`，但密钥文件不同。Host 前缀可自定义，例子中`Zeb-D`
 
 ```ruby
 # default                                                                       
@@ -50,7 +50,7 @@ HostName github.com
 User user.name
 IdentityFile ~/.ssh/id_rsa
 # two                                                                           
-Host zouyd.github.com
+Host Zeb-D.github.com
 HostName github.com
 User user.name2
 IdentityFile ~/.ssh/id_rsa_2
@@ -64,13 +64,13 @@ IdentityFile ~/.ssh/id_rsa_2
 
 ```ruby
 ssh -T git@github.com
-➜  .ssh ssh -T git@zouyd.github.com
+➜  .ssh ssh -T git@Zeb-D.github.com
 The authenticity of host 'github.com (20.205.243.166)' can't be established.
 ED25519 key fingerprint is SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU.
 This key is not known by any other names
 Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
 Warning: Permanently added 'github.com' (ED25519) to the list of known hosts.
-Enter passphrase for key '/Users/yongdongzou/.ssh/id_rsa_2':
+Enter passphrase for key '/Users/Zeb-D/.ssh/id_rsa_2':
 Hi Zeb-D! You've successfully authenticated, but GitHub does not provide shell access.
 # 出现上边这句，表示链接成功
 ```
@@ -90,10 +90,27 @@ git config user.email "xxxx@qq.com"
 Clone 项目，使用哪个账号，就加上默认的前缀(config文件)：
 
 ```
-➜  my git clone git@zouyd.github.com:Zeb-D/my-review.git
+➜  my git clone git@Zeb-D.github.com:Zeb-D/my-review.git
 Cloning into 'my-review'...
-Enter passphrase for key '/Users/yongdongzou/.ssh/id_rsa_2':
+Enter passphrase for key '/Users/Zeb-D/.ssh/id_rsa_2':
 remote: Enumerating objects: 1302, done.
+```
+
+提交：
+
+```
+➜  my-review git:(master) git push
+Enter passphrase for key '/Users/Zeb-D/.ssh/id_rsa_2': 
+Enumerating objects: 6, done.
+Counting objects: 100% (6/6), done.
+Delta compression using up to 12 threads
+Compressing objects: 100% (4/4), done.
+Writing objects: 100% (4/4), 2.44 KiB | 2.44 MiB/s, done.
+Total 4 (delta 1), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (1/1), completed with 1 local object.
+To Zeb-D.github.com:Zeb-D/my-review.git
+   94d0c9a..b7c1982  master -> master
+➜  my-review git:(master) 
 ```
 
 
