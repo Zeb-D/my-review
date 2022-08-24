@@ -51,6 +51,29 @@ auth ydRedis
 
 
 
+### postgres
+
+```
+docker run -d \
+	-p 5432:5432 \
+	--name yd-postgres \
+	-e POSTGRES_USER=yd \
+  -e POSTGRES_PASSWORD=my_postgres \
+	-e PGDATA=/var/lib/postgresql/data/pgdata \
+	-v ~/data/docker/pg:/var/lib/postgresql/data \
+	postgres:13-alpine
+```
+
+```
+docker exec -it yd-postgres bash
+psql -h localhost -U yd
+CREATE USER kong  WITH PASSWORD 'kongp';
+CREATE DATABASE kong OWNER kong;
+psql -h localhost -U kong -d kong -P kongp
+```
+
+
+
 ### mysql
 
 ```
@@ -179,13 +202,13 @@ docker exec -it ydMongo mongo admin
 db.createUser({ user:'root',pwd:'ydMongo', roles: [ { role: "userAdminAnyDatabase", db: "admin" } ] });
 ```
 
-\# 停止 linux-mongo 容器
+\# 停止ydMongo 容器
 
 ```
 docker stop ydMongo 
 ```
 
-# 删除。其实不删除也可以，没有其他影响，不删除记得下面步骤的命名不要重复。
+删除。其实不删除也可以，没有其他影响，不删除记得下面步骤的命名不要重复。
 
 ```
 docker rm -f ydMongo
