@@ -1267,6 +1267,21 @@ cgocallbackg1调用reflectcall，正式进入到用户定义的Go函数。
 
 CGO是一个非常优秀的工具，大部分使用CGO所造成的问题，都是因为使用方法不规范造成的。希望本文可以帮助大家更好的使用CGO。
 
+
+
+#### 缺点
+
+go 语言的作者之一 Dave Cheney, 写了篇[cgo is not Go](https://dave.cheney.net/tag/cgo) 告诉我们：
+
+1. 编译问题：慢、不能交叉变异
+2. 配套工程问题：go 工具链不能完全使用 如 profile，doc 等等
+3. 性能问题：调用的性能开销
+4. 开发问题：需要细心管理 C 指针，否则很容易带来内存泄漏
+
+`Cgo isn't an FFI system` 这点就和 python，lua 等调用 c 的方式很不同. Cgo在编译的时候会为代码生成大量的中间文件。 在一个Go源文件中，如果出现了import "C"指令则表示将调用cgo命令生成对应的中间文件。
+
+
+
 **参考资料：**
 
 1. Golang源码
