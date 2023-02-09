@@ -131,16 +131,26 @@ Online DDL的过程是这样的：
 > 假设这个 DDL 是针对表 t1 的， 这里我把备份过程中几个关键的语句列出来：
 >
 > Q1:SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+> 
 > Q2:START TRANSACTION  WITH CONSISTENT SNAPSHOT；
+> 
 > /* other tables */
+> 
 > Q3:SAVEPOINT sp;
+> 
 > /* 时刻 1 */
+> 
 > Q4:show create table `t1`;
+> 
 > /* 时刻 2 */
+> 
 > Q5:SELECT * FROM `t1`;
+> 
 > /* 时刻 3 */
+> 
 > Q6:ROLLBACK TO SAVEPOINT sp;
 > /* 时刻 4 */
+> 
 > /* other tables */
 
 > 在备份开始的时候，为了确保 RR（可重复读）隔离级别，再设置一次 RR 隔离级别 (Q1);
@@ -300,10 +310,15 @@ MySQL 的行锁是在引擎层由各个引擎自己实现的。但并不是所�
 我给你举一个例子吧。下面是一个只有两行的表的初始化语句。
 
 > mysql> CREATE TABLE `t` (
+> 
 >   `id` int(11) NOT NULL,
+> 
 >   `k` int(11) DEFAULT NULL,
+> 
 >   PRIMARY KEY (`id`)
+> 
 > ) ENGINE=InnoDB;
+> 
 > insert into t(id, k) values(1,1),(2,2);
 
 | session A                                  | session B                                                    | session C                     |
@@ -495,10 +510,15 @@ InnoDB 的行数据有多个版本，每个数据版本有自己的 row trx_id�
 现在，我要把所有“字段 c 和 id 值相等的行”的 c 值清零，但是却发现了一个“诡异”的、改不掉的情况。
 
 > mysql> CREATE TABLE `t` (
+> 
 >   `id` int(11) NOT NULL,
+> 
 >   `c` int(11) DEFAULT NULL,
+> 
 >   PRIMARY KEY (`id`)
+> 
 > ) ENGINE=InnoDB;
+> 
 > insert into t(id, c) values(1,1),(2,2),(3,3),(4,4);
 
 ![img](https://static001.geekbang.org/resource/image/9b/0b/9b8fe7cf88c9ba40dc12e93e36c3060b.png)
