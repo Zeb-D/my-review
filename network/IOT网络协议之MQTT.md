@@ -18,6 +18,8 @@ MQTT（Message Queuing Telemetry Transport，消息队列遥测传输协议）�
 
 固定报文头 | 可变报文头 | 负荷
 
+![network-iot-mqtt-all-protcol.png](../image/network-iot-mqtt-all-protcol.png)
+
 #### 固定报文头（Fixed Header）
 
 MQTT固定报文头最少有两个字节，第一字节包含消息类型（Message Type）和QoS级别等标志位。第二字节开始是剩余长度字段，该长度是后面的可变报文头加消息负载的总长度，该字段最多允许四个字节。
