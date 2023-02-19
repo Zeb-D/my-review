@@ -308,7 +308,8 @@ AOF提供了三种fsync配置，always/everysec/no，通过配置项[appendfsync
 AOF rewrite可以通过**BGREWRITEAOF**命令触发，也可以配置Redis定期自动进行：
 
 ```
-auto-aof-rewrite-percentage 100auto-aof-rewrite-min-size 64mb
+auto-aof-rewrite-percentage 100
+auto-aof-rewrite-min-size 64mb
 ```
 
 上面两行配置的含义是，Redis在每次AOF rewrite时，会记录完成rewrite后的AOF日志大小，当AOF日志大小在该基础上增长了100%后，自动进行AOF rewrite。同时如果增长的大小没有达到64mb，则不会进行rewrite。
@@ -427,7 +428,6 @@ for i=1,10000000,1 do
     local num = math.random(1000000,999999999);
     redis.call("set",num,i)
 end
-复制代码
 ```
 
 执行一千万条命令在本机大概用了 12 秒，QPS 83w。 Redis 在执行 Lua 脚本时是单线程，无法处理其他请求，这也是 Redis 原子性的原因。
@@ -733,11 +733,11 @@ Redisson：
 对于Jedis和Redisson的选择，同样应遵循前述的原理，尽管Jedis比起Redisson有各种各样的不足，但也应该在需要使用Redisson的高级特性时再选用Redisson，避免造成不必要的程序复杂度提升。
 
 Jedis：
-github：https://github.com/xetorthio/jedis
-文档：https://github.com/xetorthio/jedis/wiki
+- github：https://github.com/xetorthio/jedis
+- 文档：https://github.com/xetorthio/jedis/wiki
 
 Redisson：
-github：https://github.com/redisson/redisson
-文档：https://github.com/redisson/redisson/wiki
+- github：https://github.com/redisson/redisson
+- 文档：https://github.com/redisson/redisson/wiki
 
 出处：https://www.cnblogs.com/276815076/p/7245333.html
