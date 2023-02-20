@@ -1,7 +1,7 @@
 ### 预备
 
 ```
-mkdir -p /data/docker/
+mkdir -p ~/docker/
 ```
 
 列表出无效容器
@@ -23,8 +23,8 @@ docker rm `docker ps -a|grep Exited|awk '{print $1}'
 ### redis
 
 ```
-mkdir -p /data/docker/redis/data
-mkdir -p /data/docker/redis/conf
+mkdir -p ~/docker/redis/data
+mkdir -p ~/docker/redis/conf
 ```
 
  
@@ -32,7 +32,7 @@ mkdir -p /data/docker/redis/conf
 创建redis
 
 ```
-docker run -p 6379:6379 -v /data/docker/redis/data:/data:rw --name ydRedis -d redis:4.0.8 redis-server --appendonly yes --protected-mode no --requirepass "yd_redis"
+docker run -p 6379:6379 -v ~/docker/redis/data:/data:rw --name ydRedis -d redis:4.0.8 redis-server --appendonly yes --protected-mode no --requirepass "yd_redis"
 ```
 
 测试
@@ -60,7 +60,7 @@ docker run -d \
 	-e POSTGRES_USER=yd \
   -e POSTGRES_PASSWORD=my_postgres \
 	-e PGDATA=/var/lib/postgresql/data/pgdata \
-	-v ~/data/docker/pg:/var/lib/postgresql/data \
+	-v ~/docker/pg:/var/lib/postgresql/data \
 	postgres:13-alpine
 ```
 
@@ -77,14 +77,14 @@ psql -h localhost -U kong -d kong -P kongp
 ### mysql
 
 ```
-mkdir -p /data/docker/mysql/data
-mkdir -p /data/docker/mysql/conf
+mkdir -p ~/docker/mysql/data
+mkdir -p ~/docker/mysql/conf
 ```
 
 创建mysql
 
 ```
-docker run -p 3306:3306 -v /data/docker/mysql/data:/var/lib/mysql:rw --name ydMysql -e MYSQL_ROOT_PASSWORD=yd_mysql -d mysql:8.0
+docker run -p 3306:3306 --privileged=true -v ~/docker/mysql/data:/var/lib/mysql:rw --name ydMysql -e MYSQL_ROOT_PASSWORD=yd_mysql -d mysql:8.0
 ```
 
 测试
@@ -120,7 +120,7 @@ CREATE DATABASE IF NOT EXISTS test DEFAULT CHARACTER SET utf8mb4
 ### zookeeper
 
 ```
-docker run -p 2181:2181 -v /data/docker/zk/zkdata:/data:rw -v /data/docker/zk/zklogdata:/datalog --name ydZk -d zookeeper:3.4
+docker run -p 2181:2181 -v ~/docker/zk/zkdata:/data:rw -v ~/docker/zk/zklogdata:/datalog --name ydZk -d zookeeper:3.4
 ```
 
 
@@ -128,7 +128,7 @@ docker run -p 2181:2181 -v /data/docker/zk/zkdata:/data:rw -v /data/docker/zk/zk
 ### kafka
 
 ```
-docker run -d --name ydKafka -v /data/kafka:/kafka:rw --publish 9092:9092 --link ydZk --env KAFKA_ZOOKEEPER_CONNECT=ydZk:2181 --env KAFKA_ADVERTISED_HOST_NAME=localhost --env KAFKA_ADVERTISED_PORT=9092 wurstmeister/kafka:2.11-0.11.0.3
+docker run -d --name ydKafka -v ~/kafka:/kafka:rw --publish 9092:9092 --link ydZk --env KAFKA_ZOOKEEPER_CONNECT=ydZk:2181 --env KAFKA_ADVERTISED_HOST_NAME=localhost --env KAFKA_ADVERTISED_PORT=9092 wurstmeister/kafka:2.11-0.11.0.3
 ```
 
 ```
@@ -164,14 +164,14 @@ bin/kafka-console-producer.sh --broker-list localhost:9092 --topic ydKafka
 ### RabbitMQ
 
 ```
-mkdir -p /data/docker/rabbitmq/data
-mkdir -p /data/docker/rabbitmq/conf
+mkdir -p ~/docker/rabbitmq/data
+mkdir -p ~/docker/rabbitmq/conf
 ```
 
 创建rabbitmq
 
 ```
-docker run -d -p 5672:5672  -p 15672:15672 -v /data/docker/rabbitmq/data:/var/lib/rabbitmq:rw -v /etc/localtime:/etc/localtime:ro --name ydRabbitMq -e RABBITMQ_DEFAULT_USER=yd -e RABBITMQ_DEFAULT_PASS=yd@Test --restart=always rabbitmq:3.6.15-management
+docker run -d -p 5672:5672  -p 15672:15672 -v ~/docker/rabbitmq/data:/var/lib/rabbitmq:rw -v /etc/localtime:/etc/localtime:ro --name ydRabbitMq -e RABBITMQ_DEFAULT_USER=yd -e RABBITMQ_DEFAULT_PASS=yd@Test --restart=always rabbitmq:3.6.15-management
 ```
 
 测试
@@ -189,7 +189,7 @@ curl http://127.0.0.1:15672
 \# 创建无校验的容器
 
 ```
-docker run --name ydMongo -p 27017:27017 -v /data/docker/mongo/:/data/db -d mongo
+docker run --name ydMongo -p 27017:27017 -v ~/docker/mongo/:/data/db -d mongo
 ```
 
 ```
@@ -221,7 +221,7 @@ docker rm -f ydMongo
 \# 创建容器 - 有校验
 
 ```
-docker run --name ydMongo -p 27017:27017 -v /data/docker/mongo:/data/db -d mongo --auth
+docker run --name ydMongo -p 27017:27017 -v ~/docker/mongo:/data/db -d mongo --auth
 ```
 
 ```

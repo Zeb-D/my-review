@@ -18,6 +18,8 @@ Rust 有几点特性非常吸引团队：
 劣势：
 
 Rust 的编译时间较长、实践曲线高；
+详见[写Rust，有三大内伤](https://mp.weixin.qq.com/s/SUCLv0zfjFtoO1vVgCzAWg).
+[When Rust hurts](https://mmapped.blog/posts/15-when-rust-hurts.html)
 
 
 

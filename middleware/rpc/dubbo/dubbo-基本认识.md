@@ -104,9 +104,10 @@ Dubbo总体分三层，细分为十层。同时这十层也可以分为API层和
 
 - API层和SPI层，是Dubbo的成功之处，具体的我们后面在介绍。 我们先看看这十层具体是干啥的:
 - Service，业务层，就是咱们开发的业务逻辑层。
-   Config，配置层，主要围绕 ServiceConfig 和 ReferenceConfig，初始化配置信息。
+-  Config，配置层，主要围绕 ServiceConfig 和 ReferenceConfig，初始化配置信息。
 - Proxy，代理层，服务提供者还是消费者都会生成一个代理类，使得服务接口透明化，代理层做远程调用和返 回结果。
-- Register，注册层，封装了服务注册和发现。 Cluster，路由和集群容错层，负责选取具体调用的节点，处理特殊的调用要求和负责远程调用失败的容错措施。
+- Register，注册层，封装了服务注册和发现。 
+- Cluster，路由和集群容错层，负责选取具体调用的节点，处理特殊的调用要求和负责远程调用失败的容错措施。
 - Monitor，监控层，负责监控统计调用时间和次数。
 - Portocol，远程调用层，主要是封装 RPC 调用，主要负责管理Invoker，Invoker代表一个抽象封装了的执行 体，之后再做详解。
 - Exchange，信息交换层，用来封装请求响应模型，同步转异步。 Transport，网络传输层，抽象了网络传输的统一接口，这样用户想用Netty 就用 Netty，想用 Mina 就用Mina。

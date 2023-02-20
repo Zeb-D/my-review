@@ -117,7 +117,7 @@ MySQL 从你输入的"select"这个关键字识别出来，这是一个查询语
 如果你的语句不对，就会收到`“You have an error in your SQL syntax”`的错误提醒，比如下面这个语句 select 少打了开头的字母“s”。
 
 ```
-mysql> elect * from t where ID=1;
+mysql> select * from t where ID=1;
 
 ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'elect * from t where ID=1' at line 1
 ```

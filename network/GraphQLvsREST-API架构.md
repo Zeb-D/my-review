@@ -70,7 +70,7 @@ REST 架构的设计范式侧重于分配 HTTP 请求方法（GET、POST、PUT�
 
 与 RESTful API 一样，GraphQL API 设计用于处理 HTTP 请求并对这些请求提供响应。无论如何，这就是相似之处。REST API 构建在请求方法和端点之间的连接上，而 GraphQL API 被设计为只通过一个端点，始终使用 POST 请求进行查询，其 URL 通常是 yourdomain.com/graphql。
 
-<img src="../image/graphQL-api-arc.jpg" style="zoom:80%;" />
+![graphQL-api-arc.jpg](../image/graphQL-api-arc.jpg)
 
 请求到达 GraphQL 端点后，客户端请求的载荷完全在请求体中处理。这个请求体必须遵循 GraphQL 规范，API 必须有适当的服务器端逻辑来处理这些请求并提供适当的响应。
 
