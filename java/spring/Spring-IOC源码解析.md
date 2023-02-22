@@ -1962,5 +1962,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 如果出现了循环依赖，那没有办法，只有给Bean先创建代理，但是没有出现循环依赖的情况下，设计之初就是让Bean在生命周期的最后一步完成代理而不是在实例化后就立马完成代理。
 
+对于循环依赖[详见](https://blog.csdn.net/yangjnsjbad/article/details/124984561)。
+
 
 
