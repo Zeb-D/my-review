@@ -88,6 +88,8 @@ ECC和RSA相比，在许多方面都有对绝对的优势：
 
 带宽要求低。当对长消息进行加解密时，三类密码系统有相同的带宽要求，但应用于短消息时ECC带宽要求却低得多。带宽要求低使ECC在无线网络领域具有广泛的应用前景。<br>
 
+
+
 ###常见的Hash算法：
 
 MD2、MD4、MD5、HAVAL、SHA、SHA-1、HMAC、HMAC-MD5、HMAC-SHA1
@@ -214,7 +216,7 @@ d) 同时生成公钥和私钥应该相对比较容易，但是从公钥推算�
 
 说了这么多，HTTPS其实就是在HTTP协议下多加了一层SSL(Secure Sockets Layer 安全套接层)协议（ps:现在都用TLS 传输层安全[Transport Layer Security]协议)，它的网络模型流转如下：
 
-![img](https://user-gold-cdn.xitu.io/2018/7/30/164eaef6f19089b3?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+![network-https-connect-flow.png](../image/network-https-connect-flow.png)
 
 可以看出，是在应用层 与 传输层 加了层 抽象层（这在五/七层网络模型 中是不存在的）。
 
