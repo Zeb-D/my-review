@@ -14,7 +14,7 @@ HBase是一个分布式存储、数据库引擎，可以支持千万的QPS、PB�
 
 HBase可以说是一个数据库，也可以说是一个存储。拥有双重属性的HBase天生就具备广阔的应用场景。在最近的一些版本中，引入了OffHeap降低gc影响，优化链路延迟，提供Replica等可以满足在线的需求。引入MOB，可以存储10M左右的对象，完全适应了对象存储。另外由于自身的并发能力、存储能力，可以说是具有最为竞争力的引擎
 
-<img src="../../image/hbase-use-scence.jpeg" alt="../../image/hbase-use-scence.jpeg" style="zoom:67%;" />
+![](../../image/hbase-use-scence.jpeg)
 
 - 对象存储：我们知道不少的头条类、新闻类的的新闻、网页、图片存储在HBase之中，一些病毒公司的病毒库也是存储在HBase之中
 - 时序数据：HBase之上有OpenTSDB模块，可以满足时序类场景的需求
@@ -35,7 +35,7 @@ HBase可以说是一个数据库，也可以说是一个存储。拥有双重属
 
 HBase以表的形式存储数据，表由行和列组成。列划分为若干个列族，如下图所示：
 
-<img src="../../image/hbase-store-struct.png" style="zoom:80%;" />
+![](../../image/hbase-store-struct.png)
 
 RowKey：Hbase使用Rowkey来唯一的区分某一行的数据。如图中"rk001"
 

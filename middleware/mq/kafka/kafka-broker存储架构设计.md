@@ -60,7 +60,7 @@ Kafka 最终的存储实现方案，即基于顺序追加写日志 + 稀疏哈�
 
 接下来我们来看看 Kafka 日志存储结构：
 
-<img src="../../../image/kakfa-store-log-design.png" alt="kakfa-store-log-design.png" style="zoom:50%;" />
+![](../../../image/kakfa-store-log-design.png)
 
 从上图可以看出来，Kafka 是基于「主题 + 分区 + 副本 + 分段 + 索引」的结构：
 
@@ -88,7 +88,7 @@ Kafka 最终的存储实现方案，即基于顺序追加写日志 + 稀疏哈�
 
 随着消息的不断写入，当 activeSegement 满足一定的条件时，就需要创建新的 activeSegement，之后再追加的消息会写入新的 activeSegement。
 
-<img src="../../../image/kafka-store-log-activeSegment.png" alt="kafka-store-log-activeSegment.png" style="zoom:50%;" />
+![](../../../image/kafka-store-log-activeSegment.png)
 
 为了更高效的进行消息检索，每个 LogSegment 中的日志文件（以 “.log” 为文件后缀）都有对应的几个索引文件：偏移量索引文件（以 “.index” 为文件后缀）、时间戳索引文件（以 “.timeindex” 为文件后缀）、快照索引文件 （以 “.snapshot” 为文件后缀）。
 
