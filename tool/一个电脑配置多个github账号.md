@@ -84,7 +84,7 @@ git config --global user.email "aaa-bb@cc.com"
 
 单独项目配置
 git config user.name "Zeb-D"
-git config user.email "xxxx@qq.com"
+git config user.email "1406721322@qq.com"
 ```
 
 Clone 项目，使用哪个账号，就加上默认的前缀(config文件)：

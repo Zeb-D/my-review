@@ -16,7 +16,7 @@ docker ps -a|grep Exited|awk '{print $1}'
 docker rm `docker ps -a|grep Exited|awk '{print $1}'
 ```
 
-`
+
 
 
 
@@ -128,7 +128,7 @@ docker run -p 2181:2181 -v ~/docker/zk/zkdata:/data:rw -v ~/docker/zk/zklogdata:
 ### kafka
 
 ```
-docker run -d --name ydKafka -v ~/kafka:/kafka:rw --publish 9092:9092 --link ydZk --env KAFKA_ZOOKEEPER_CONNECT=ydZk:2181 --env KAFKA_ADVERTISED_HOST_NAME=localhost --env KAFKA_ADVERTISED_PORT=9092 wurstmeister/kafka:2.11-0.11.0.3
+docker run -d --name ydKafka -v ~/docker/kafka:/kafka:rw --publish 9092:9092 --link ydZk --env KAFKA_ZOOKEEPER_CONNECT=ydZk:2181 --env KAFKA_ADVERTISED_HOST_NAME=localhost --env KAFKA_ADVERTISED_PORT=9092 wurstmeister/kafka:2.11-0.11.0.3
 ```
 
 ```
@@ -345,5 +345,31 @@ http://localhost:16010/master-status
 ```
 docker exec -it yd_hbasee bash
 hbase shell
+```
+
+
+
+### minikube
+
+```
+brew install minikube
+
+minikube delete --all --purge
+
+minikube start --driver=docker --force --extra-config=kubelet.cgroup-driver=systemd --cni calico --container-runtime=containerd --registry-mirror=https://registry.docker-cn.com
+```
+
+这里用了docker作为containerd，需要提前安装它；
+
+
+
+### Etcd 
+
+```
+mkdir -p ~/docker/etcd/
+
+docker run --name etcd -d -p 2379:2379 -p 2380:2380 -v ~/docker/etcd:/data -e ALLOW_NONE_AUTHENTICATION=yes bitnami/etcd:3.3.11 etcd  --data-dir /data 
+
+curl -L http://127.0.0.1:2379/version
 ```
 
