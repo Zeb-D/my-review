@@ -13,7 +13,10 @@ docker ps -a|grep Exited|awk '{print $1}'
 批量删除无效容器
 
 ```
-docker rm `docker ps -a|grep Exited|awk '{print $1}'
+docker rm -f `docker ps -a|grep Exited|awk '{print $1}'`
+docker rm -f `docker ps -a|grep pd|awk '{print $1}'`
+docker rm -f `docker ps -a|grep tikv|awk '{print $1}'`
+
 ```
 
 
@@ -371,5 +374,83 @@ mkdir -p ~/docker/etcd/
 docker run --name etcd -d -p 2379:2379 -p 2380:2380 -v ~/docker/etcd:/data -e ALLOW_NONE_AUTHENTICATION=yes bitnami/etcd:3.3.11 etcd  --data-dir /data 
 
 curl -L http://127.0.0.1:2379/version
+```
+
+
+### caddy 
+
+```
+mkdir -p ~/docker/caddy/
+
+docker run -d -p 80:80 -p 2019:2019 -v ~/docker/caddy/:/data caddy
+
+curl http://localhost/
+curl http://localhost:2019/config/
+
+```
+
+
+### tikv 
+
+```
+
+mkdir -p ~/docker/tikv/
+
+ git clone https://github.com/pingcap/tidb-docker-compose.git
+ cd tidb-docker-compose && docker-compose pull # Get the latest Docker images
+ sudo setenforce 0 # Only on Linux
+ docker-compose up -d
+ mysql -h 127.0.0.1 -P 4000 -u root
+
+http://localhost:3000/?orgId=1
+http://localhost:8010/
+http://localhost:8080/
+
+curl 0.0.0.0:2379/pd/api/v1/stores
+curl 192.169.30.11:2379/pd/api/v1/stores
+curl 192.169.30.11:12379/pd/api/v1/stores
+curl 0.0.0.0:12379/pd/api/v1/stores
+
+```
+
+
+### emqx 
+
+```
+mkdir -p ~/docker/emqx/
+
+docker run -d --name emqx -v ~/docker/emqx/:/opt/emqx/data -p 1883:1883 -p 8083:8083 -p 8084:8084 -p 8883:8883 -p 18083:18083 emqx/emqx:5.1.0
+
+// Under Linux host machine
+docker run -d --name emqx -v ~/docker/emqx/:/opt/emqx/data -p 1883:1883 -p 8083:8083 -p 8084:8084 -p 8883:8883 -p 18083:18083 \
+    --sysctl fs.file-max=2097152 \
+    --sysctl fs.nr_open=2097152 \
+    --sysctl net.core.somaxconn=32768 \
+    --sysctl net.ipv4.tcp_max_syn_backlog=16384 \
+    --sysctl net.core.netdev_max_backlog=16384 \
+    --sysctl net.ipv4.ip_local_port_range=1000 65535 \
+    --sysctl net.core.rmem_default=262144 \
+    --sysctl net.core.wmem_default=262144 \
+    --sysctl net.core.rmem_max=16777216 \
+    --sysctl net.core.wmem_max=16777216 \
+    --sysctl net.core.optmem_max=16777216 \
+    --sysctl net.ipv4.tcp_rmem=1024 4096 16777216 \
+    --sysctl net.ipv4.tcp_wmem=1024 4096 16777216 \
+    --sysctl net.ipv4.tcp_max_tw_buckets=1048576 \
+    --sysctl net.ipv4.tcp_fin_timeout=15 \
+    emqx:latest
+
+
+UI：
+http://localhost:18083/
+admin/public
+
+API：
+https://www.emqx.io/docs/zh/v5.1/admin/api.html
+http://localhost:18083/api-docs/index.html
+curl -i --basic -u d2e8588d81ceb481:8lEcT48M9AOv2DGaqZMwsFHU7jy9A3e9C9CGkxf9AWmauPOI -X GET "http://localhost:18083/api/metrics"
+curl -i -H 'Authorization: Basic ZDJlODU4OGQ4MWNlYjQ4MTo4bEVjVDQ4TTlBT3YyREdhcVpNd3NGSFU3ank5QTNlOUM5Q0dreGY5QVdtYXVQT0k=' -X GET "http://localhost:18083/api/v5/exhooks"
+
+
 ```
 
