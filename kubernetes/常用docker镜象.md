@@ -371,7 +371,7 @@ minikube start --driver=docker --force --extra-config=kubelet.cgroup-driver=syst
 ```
 mkdir -p ~/docker/etcd/
 
-docker run --name etcd -d -p 2379:2379 -p 2380:2380 -v ~/docker/etcd:/data -e ALLOW_NONE_AUTHENTICATION=yes bitnami/etcd:3.3.11 etcd  --data-dir /data 
+docker run --name etcd -d -p 2379:2379 -p 2380:2380 -v ~/docker/etcd:/bitnami/etcd --env ALLOW_NONE_AUTHENTICATION=yes  --env ETCD_BASE_DIR=/data bitnami/etcd:latest
 
 curl -L http://127.0.0.1:2379/version
 ```
@@ -410,6 +410,57 @@ curl 0.0.0.0:2379/pd/api/v1/stores
 curl 192.169.30.11:2379/pd/api/v1/stores
 curl 192.169.30.11:12379/pd/api/v1/stores
 curl 0.0.0.0:12379/pd/api/v1/stores
+
+```
+
+### apisix 
+
+```
+
+mkdir -p ~/docker/apisix/
+cd ~/docker/apisix/
+
+vim apisix-config.yaml
+apisix:
+  node_listen: 9080              # APISIX listening port
+  enable_ipv6: false
+
+  enable_control: true
+  control:
+    ip: "0.0.0.0"
+    port: 9092
+
+deployment:
+  admin:
+    allow_admin:               # https://nginx.org/en/docs/http/ngx_http_access_module.html#allow
+      - 0.0.0.0/0              # We need to restrict ip access rules for security. 0.0.0.0/0 is for test.
+
+    admin_key:
+      - name: "admin"
+        key: edd1c9f034335f136f87ad84b625c8f1
+        role: admin                 # admin: manage all configuration data
+
+      - name: "viewer"
+        key: 4054f7cf07e344346cd3f287985e76a2
+        role: viewer
+
+  etcd:
+    host:                           # it's possible to define multiple etcd hosts addresses of the same etcd cluster.
+      - "http://10.0.98.122:2379"          # multiple etcd address
+    prefix: "/apisix"               # apisix configurations prefix
+    timeout: 30                     # 30 seconds
+
+
+docker run --name test-api-gateway \
+ -v ~/docker/apisix/apisix-config.yaml:/usr/local/apisix/conf/config.yaml \
+ -v ~/docker/apisix:/usr/local/apisix/logs  \
+ -p 9080:9080 \
+ -p 9091:9091  \
+ -p 9443:9443 \
+ -d apache/apisix
+ 
+curl http://127.0.0.1:9080/apisix/admin/routes/
+
 
 ```
 
@@ -453,4 +504,25 @@ curl -i -H 'Authorization: Basic ZDJlODU4OGQ4MWNlYjQ4MTo4bEVjVDQ4TTlBT3YyREdhcVp
 
 
 ```
+
+### TDengine
+```
+
+https://docs.taosdata.com/get-started/docker/
+
+mkdir -p ~/docker/tdengine/taos/dnode/
+
+/var/lib/taos: TDengine 默认数据文件目录。可通过[配置文件]修改位置。你可以修改~/data/taos/dnode/data为你自己的数据目录
+/var/log/taos: TDengine 默认日志文件目录。可通过[配置文件]修改位置。你可以修改~/data/taos/dnode/log为你自己的日志目录
+
+docker run -d -v ~/docker/tdengine/taos/dnode/data:/var/lib/taos \
+  -v ~/docker/tdengine/taos/dnode/log:/var/log/taos \
+  -p 6030:6030 -p 6041:6041 -p 6043-6049:6043-6049 -p 6043-6049:6043-6049/udp tdengine/tdengine
+
+docker exec -it 907c5a0e4b6b bash
+
+root@907c5a0e4b6b:~# taos
+
+```
+
 
