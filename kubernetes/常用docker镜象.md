@@ -523,6 +523,14 @@ docker exec -it 907c5a0e4b6b bash
 
 root@907c5a0e4b6b:~# taos
 
+// 创建数据库：KEEP-保留N天数据，timestatme 精度为ns DURATION-每N天产生一个文件，BUFFER-VNode 的写入内存池的大小，WAL_LEVEL-预写日志级别
+CREATE DATABASE device KEEP 365 PRECISION 'ns' DURATION 10 BUFFER 16 WAL_LEVEL 1;
+
+use device;
+
+show tables;
+
+
 ```
 
 
