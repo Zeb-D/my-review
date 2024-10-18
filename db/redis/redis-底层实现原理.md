@@ -31,6 +31,10 @@ OK
 
 
 
+本文主要分析redis `string` `hash` `list` `set` `sortset` ，需要了解基础命令可见：https://mp.weixin.qq.com/s/vsTLu0lsKNPkfNih52fGMw ；
+
+
+
 ### 六大数据结构
 
 #### 简单动态字符串

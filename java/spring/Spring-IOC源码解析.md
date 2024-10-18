@@ -1633,11 +1633,15 @@ BeanPostProcessor.postProcessAfterInstantiation();
 
 
 
-spring解决这个问题主要靠巧妙的三层缓存，所谓的缓存主要是指这三个map,singletonObjects主要存放的是单例对象，属于第一级缓存；singletonFactories属于单例工厂对象，属于第三级缓存；
+spring解决这个问题主要靠巧妙的三层缓存，所谓的缓存主要是指这三个map：
 
+singletonObjects主要存放的是单例对象，属于第一级缓存；
 
+singletonFactories属于单例工厂对象，属于第三级缓存；
 
-earlySingletonObjects属于第二级缓存，如何理解early这个标识呢？它表示只是经过了实例化尚未初始化的对象。Spring首先从singletonObjects（一级缓存）中尝试获取，如果获取不到并且对象在创建中，则尝试从earlySingletonObjects(二级缓存)中获取，如果还是获取不到并且允许从singletonFactories通过getObject获取，则通过singletonFactory.getObject()(三级缓存)获取。
+earlySingletonObjects属于第二级缓存，如何理解early这个标识呢？
+
+它表示只是经过了实例化尚未初始化的对象。Spring首先从singletonObjects（一级缓存）中尝试获取，如果获取不到并且对象在创建中，则尝试从earlySingletonObjects(二级缓存)中获取，如果还是获取不到并且允许从singletonFactories通过getObject获取，则通过singletonFactory.getObject()(三级缓存)获取。
 
 
 

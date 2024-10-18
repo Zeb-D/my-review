@@ -92,47 +92,42 @@ slave node 内部有个定时任务，每秒检查是否有新的 master node �
 
 ![redis-master-slave-replication-detail](../../image/redis-master-slave-replication-detail.png)
 
-##### 全量复制
 
-- master 执行 bgsave ，在本地生成一份 rdb 快照文件。
-- master node 将 rdb 快照文件发送给 slave node，如果 rdb 复制时间超过 60秒（repl-timeout），那么 slave node 就会认为复制失败，可以适当调大这个参数(对于千兆网卡的机器，一般每秒传输 100MB，6G 文件，很可能超过 60s)
-- master node 在生成 rdb 时，会将所有新的写命令缓存在内存中，在 slave node 保存了 rdb 之后，再将新的写命令复制给 slave node。
-- 如果在复制期间，内存缓冲区持续消耗超过 64MB，或者一次性超过 256MB，那么停止复制，复制失败。
 
-```
-client-output-buffer-limit slave 256MB 64MB 60
-```
+- 全量复制
+  - master 执行 bgsave ，在本地生成一份 rdb 快照文件。
+  - master node 将 rdb 快照文件发送给 slave node，如果 rdb 复制时间超过 60秒（repl-timeout），那么 slave node 就会认为复制失败，可以适当调大这个参数(对于千兆网卡的机器，一般每秒传输 100MB，6G 文件，很可能超过 60s)
+  - master node 在生成 rdb 时，会将所有新的写命令缓存在内存中，在 slave node 保存了 rdb 之后，再将新的写命令复制给 slave node。
+  - 如果在复制期间，内存缓冲区持续消耗超过 64MB，或者一次性超过 256MB，那么停止复制，复制失败。参数配置见`client-output-buffer-limit slave 256MB 64MB 60`
 
-- slave node 接收到 rdb 之后，清空自己的旧数据，然后重新加载 rdb 到自己的内存中，同时**基于旧的数据版本**对外提供服务。
-- 如果 slave node 开启了 AOF，那么会立即执行 BGREWRITEAOF，重写 AOF。
+  - slave node 接收到 rdb 之后，清空自己的旧数据，然后重新加载 rdb 到自己的内存中，同时**基于旧的数据版本**对外提供服务。
+  - 如果 slave node 开启了 AOF，那么会立即执行 BGREWRITEAOF，重写 AOF。
 
-##### 增量复制
+- 增量复制
+  - 如果全量复制过程中，master-slave 网络连接断掉，那么 slave 重新连接 master 时，会触发增量复制。
+  - master 直接从自己的 backlog 中获取部分丢失的数据，发送给 slave node，默认 backlog 就是1MB。
+  - msater就是根据 slave 发送的 psync 中的 offset 来从 backlog 中获取数据的。
 
-- 如果全量复制过程中，master-slave 网络连接断掉，那么 slave 重新连接 master 时，会触发增量复制。
-- master 直接从自己的 backlog 中获取部分丢失的数据，发送给 slave node，默认 backlog 就是1MB。
-- msater就是根据 slave 发送的 psync 中的 offset 来从 backlog 中获取数据的。
+- heartbeat
 
-##### heartbeat
+  - 主从节点互相都会发送 heartbeat 信息。
 
-主从节点互相都会发送 heartbeat 信息。
+  - master 默认每隔 10秒 发送一次 heartbeat，slave node 每隔 1秒 发送一个 heartbeat。
 
-master 默认每隔 10秒 发送一次 heartbeat，slave node 每隔 1秒 发送一个 heartbeat。
+- 异步复制
+  - master 每次接收到写命令之后，先在内部写入数据，然后异步发送给 slave node。
 
-##### 异步复制
 
-master 每次接收到写命令之后，先在内部写入数据，然后异步发送给 slave node。
 
-#### redis 主从如何才能做到高可用
+#### redis 主从的高可用
 
-如果系统在 365 天内，有 99.99% 的时间，都是可以哗哗对外提供服务的，那么就说系统是高可用的。
-
-一个 slave 挂掉了，是不会影响可用性的，还有其它的 slave 在提供相同数据下的相同的对外的查询服务。
-
-但是，如果 master node 死掉了，会怎么样？没法写数据了，写缓存的时候，全部失效了。slave node 还有什么用呢，没有 master 给它们复制数据了，系统相当于不可用了。
+如果 master node 死掉了，会怎么样？没法写数据了，写缓存的时候，全部失效了。slave node 还有什么用呢，没有 master 给它们复制数据了，系统相当于不可用了。
 
 redis 的高可用架构，叫做 `failover` **故障转移**，也可以叫做主备切换。
 
 master node 在故障时，自动检测，并且将某个 slave node 自动切换位 master node的过程，叫做主备切换。这个过程，实现了 redis 的主从架构下的高可用。
+
+
 
 <br>
 
@@ -298,6 +293,79 @@ sdown 达成的条件很简单，如果一个哨兵 ping 一个 master，超过�
 这里之前的 version 号就很重要了，因为各种消息都是通过一个 channel 去发布和监听的，所以一个哨兵完成一次新的切换之后，新的 master 配置是跟着新的 version 号的。其他的哨兵都是根据版本号的大小来更新自己的 master 配置的。
 
 <br>
+
+
+
+### Redis Cluster 集群
+
+### 集群分片
+
+为何要做集群分片：
+
+- Redis中存储的数据量大，一台主机的物理内存已经无法容纳
+- Redis的写请求并发量大，一个Redis实例以无法承载
+
+当上述两个问题出现时，就必须要对Redis进行分片了。
+Redis的分片方案有很多种，例如很多Redis的客户端都自行实现了分片功能，也有向Twemproxy这样的以代理方式实现的Redis分片方案。然而首选的方案还应该是Redis官方在3.0版本中推出的Redis Cluster分片方案。
+
+本文不会对Redis Cluster的具体安装和部署细节进行介绍，重点介绍Redis Cluster带来的好处与弊端。
+
+#### Redis Cluster的能力
+
+- 能够自动将数据分散在多个节点上
+- 当访问的key不在当前分片上时，能够自动将请求转发至正确的分片
+- 当集群中部分节点失效时仍能提供服务
+
+其中第三点是基于主从复制来实现的，Redis Cluster的每个数据分片都采用了主从复制的结构，原理和前文所述的主从复制完全一致，唯一的区别是省去了Redis Sentinel这一额外的组件，由Redis Cluster负责进行一个分片内部的节点监控和自动failover。
+
+#### Redis Cluster分片原理
+
+Redis Cluster中共有16384个hash slot，Redis会计算每个key的CRC16，将结果与16384取模，来决定该key存储在哪一个hash slot中，同时需要指定Redis Cluster中每个数据分片负责的Slot数。Slot的分配在任何时间点都可以进行重新分配。
+
+客户端在对key进行读写操作时，可以连接Cluster中的任意一个分片，如果操作的key不在此分片负责的Slot范围内，Redis Cluster会自动将请求重定向到正确的分片上。
+
+#### hash tags
+
+在基础的分片原则上，Redis还支持hash tags功能，以hash tags要求的格式明明的key，将会确保进入同一个Slot中。例如：{uiv}user:1000和{uiv}user:1001拥有同样的hash tag {uiv}，会保存在同一个Slot中。
+
+使用Redis Cluster时，pipelining、事务和LUA Script功能涉及的key必须在同一个数据分片上，否则将会返回错误。如要在Redis Cluster中使用上述功能，就必须通过hash tags来确保一个pipeline或一个事务中操作的所有key都位于同一个Slot中。
+
+> 有一些客户端（如Redisson）实现了集群化的pipelining操作，可以自动将一个pipeline里的命令按key所在的分片进行分组，分别发到不同的分片上执行。但是Redis不支持跨分片的事务，事务和LUA Script还是必须遵循所有key在一个分片上的规则要求。
+
+
+
+### 主从复制 vs 集群分片
+
+在设计软件架构时，要如何在主从复制和集群分片两种部署方案中取舍呢？
+
+从各个方面看，Redis Cluster都是优于主从复制的方案
+
+- Redis Cluster能够解决单节点上数据量过大的问题
+- Redis Cluster能够解决单节点访问压力过大的问题
+- Redis Cluster包含了主从复制的能力
+
+那是不是代表Redis Cluster永远是优于主从复制的选择呢？
+
+并不是。
+
+软件架构永远不是越复杂越好，复杂的架构在带来显著好处的同时，一定也会带来相应的弊端。采用Redis Cluster的弊端包括：
+
+- 维护难度增加。在使用Redis Cluster时，需要维护的Redis实例数倍增，需要监控的主机数量也相应增加，数据备份/持久化的复杂度也会增加。同时在进行分片的增减操作时，还需要进行reshard操作，远比主从模式下增加一个Slave的复杂度要高。
+- 客户端资源消耗增加。当客户端使用连接池时，需要为每一个数据分片维护一个连接池，客户端同时需要保持的连接数成倍增多，加大了客户端本身和操作系统资源的消耗。
+- 性能优化难度增加。你可能需要在多个分片上查看Slow Log和Swap日志才能定位性能问题。
+- 事务和LUA Script的使用成本增加。在Redis Cluster中使用事务和LUA Script特性有严格的限制条件，事务和Script中操作的key必须位于同一个分片上，这就使得在开发时必须对相应场景下涉及的key进行额外的规划和规范要求。如果应用的场景中大量涉及事务和Script的使用，如何在保证这两个功能的正常运作前提下把数据平均分到多个数据分片中就会成为难点。
+
+所以说，在主从复制和集群分片两个方案中做出选择时，应该从应用软件的功能特性、数据和访问量级、未来发展规划等方面综合考虑，只在**确实有必要**引入数据分片时再使用Redis Cluster。
+下面是一些建议：
+
+1. 需要在Redis中存储的数据有多大？未来2年内可能发展为多大？这些数据是否都需要长期保存？是否可以使用LRU算法进行非热点数据的淘汰？综合考虑前面几个因素，评估出Redis需要使用的物理内存。
+2. 用于部署Redis的主机物理内存有多大？有多少可以分配给Redis使用？对比(1)中的内存需求评估，是否足够用？
+3. Redis面临的并发写压力会有多大？在不使用pipelining时，Redis的写性能可以超过10万次/秒（更多的benchmark可以参考 https://redis.io/topics/benchmarks ）
+4. 在使用Redis时，是否会使用到pipelining和事务功能？使用的场景多不多？
+
+综合上面几点考虑，如果单台主机的可用物理内存完全足以支撑对Redis的容量需求，且Redis面临的并发写压力距离Benchmark值还尚有距离，建议采用主从复制的架构，可以省去很多不必要的麻烦。同时，如果应用中大量使用pipelining和事务，也建议尽可能选择主从复制架构，可以减少设计和开发时的复杂度。
+
+
 
 ### 总结
 

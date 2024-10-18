@@ -6,7 +6,9 @@
 
 ### 序
 
-本文主要通过mysql的主要架构设计，来普及下主要知识点，为接下来系列学习mysql更深次做普及如事物实现、B+ tree index 相关实现等
+本文主要通过mysql的主要架构设计，来普及下主要知识点，为接下来系列学习mysql更深次做普及如事物实现、B+ tree index 相关实现等；
+
+
 
 
 
@@ -22,15 +24,31 @@ mysql的InnoDB存储引擎架构，包括了内存架构和磁盘架构两部分
 
 其中，内存架构部分包括：
 
-缓冲池（Buffer Poll）、
+- 缓冲池（Buffer Poll）
 
-修改缓冲区（Change Buffer）、
 
-自适应hash索引（Adaptive Hash Index）、
+- 修改缓冲区（Change Buffer）
 
-日志缓冲区（Log Buffer）。
 
-磁盘架构包括：表、索引、表空间、双写缓冲区(Doublewrite Buffer)、重做日志(Redo Log)、撤销日志(Undo Logs)。
+- 自适应hash索引（Adaptive Hash Index）
+
+
+- 日志缓冲区（Log Buffer）
+
+
+磁盘架构包括：
+
+- 表
+
+- 索引
+
+- 表空间
+
+- 双写缓冲区(Doublewrite Buffer)
+
+- 重做日志(Redo Log)
+
+- 撤销日志(Undo Logs)
 
 
 
@@ -38,45 +56,78 @@ mysql的InnoDB存储引擎架构，包括了内存架构和磁盘架构两部分
 
 #### 缓冲池（Buffer Poll）
 
-​    缓冲池是InnoDB位于主存储器中的一片区域，用于缓存访问过的表和索引数据。缓冲池允许直接从内存处理频繁使用的数据，这加快了处理速度。在专用服务器上，通常高达80%的物理内存会分配给缓冲池。
-
-​    为了提高大容量读操作的效率，缓冲池被分割成一个个可以容纳多行的页(pages)。为了方便缓存管理，缓冲池被实现成页的链表结构；很少使用的数据会使用LRU算法的一种变体从缓存中淘汰。
-
-​    了解如何利用缓冲池将频繁访问的数据保存在内存中，是MySQL调优的一个重要方面。
-
 ![mysql-innodb-buffer-poll.png](../../image/mysql-innodb-buffer-poll.png)
+
+ 缓冲池是InnoDB位于主存储器中的一片区域，用于缓存访问过的表和索引数据。缓冲池允许直接从内存处理频繁使用的数据，这加快了处理速度。在专用服务器上，通常高达80%的物理内存会分配给缓冲池。
+
+为了提高大容量读操作的效率，缓冲池被分割成一个个可以容纳多行的页(pages)，缓冲池被实现成页的链表结构，即使用了一种从缓存中淘汰的变体LRU算法。
+
+
+
+了解如何利用缓冲池将频繁访问的数据保存在内存中，是MySQL调优的一个重要方面。
+
+> 关于图上所示该缓存出现了3/8、5/8对LRU的升级，其中因素有：
+>
+> 1、防止突发的冷数据挤占热数据；
+>
+> 2、冷数据多次读写才能升级成热数据；
+
+
 ﻿
 
 
 
 #### 修改缓冲区
 
-​    **修改缓冲区**是一个特殊的数据结构，用于缓存不在**缓冲池**中的那些二级索引页的变更。由insert, update或delete这些dml操作导致被缓存的变化，将在当这些页被其他读操作加载到缓冲池后合并。
-
-﻿
-
 ![mysql-innodb-buffer-update.png](../../image/mysql-innodb-buffer-update.png)
+
+> ​    **修改缓冲区**是一个特殊的数据结构，用于缓存不在**缓冲池**中的那些二级索引页的变更。
+
+由`insert、 update、delete`这些dml操作导致被缓存的变化，将在当这些页被其他读操作加载到缓冲池后合并，此时知道哪些change后进行WAL到redo log中。
+
+
+
 
 
 #### 自适应hash索引
 
-​    自适应散列索引特性，使InnoDB在具有适当的负载组合和充足的缓冲池内存的系统上，执行得更像内存数据库，而不会牺牲事务特性或可靠性。自适应哈希索引特性通过变量: innodb_adaptive_hash_index开启，或在服务启动时通过--skip-innodb-adaptive-hash-index参数关闭。
+​    自适应散列索引特性，使InnoDB在具有适当的负载组合和充足的缓冲池内存的系统上，执行得更像内存数据库，而不会牺牲事务特性或可靠性。
 
-​    根据观察到的搜索模式，hash索引是使用索引key的前缀来创建的。前缀可以是任意长度，并且可能只有B树中的一些值出现在哈希索引中。哈希索引是根据需要为经常访问的索引页构建的。
+
+
+自适应hash索引需要注意一些点：
+
+> 1、自适应哈希索引特性通过变量: innodb_adaptive_hash_index开启，
+>
+> 2、或在服务启动时通过--skip-innodb-adaptive-hash-index参数关闭。
+>
+> 3、hash索引是使用索引key的前缀来创建的，前缀可以是任意长度，并且可能只有B树中的一些值出现在哈希索引中。
+>
+> 4、哈希索引是根据需要为经常访问的索引页构建的。一般不会用到它。
+
+
 
 
 
 #### 日志缓冲
 
-日志缓冲区是保存即将写入磁盘上日志文件的数据的内存区域。
+> 日志缓冲区是保存即将写入磁盘上日志文件的数据的内存区域。
 
-日志缓冲区大小由变量innodb_log_buffer_size定义。默认的大小是16MB。
 
-日志缓冲区的内容定期刷新到磁盘。大的日志缓冲区能够在事务提交前无需写入redo日志数据到磁盘的情况下执行大事务。
 
-因此，如果你有更新、插入、删除很多行记录的事务，可以通过增加日志缓冲区的大小来减少磁盘I/O。
+> 日志缓冲区大小由变量innodb_log_buffer_size定义。默认的大小是16MB。
 
-innodb_flush_log_at_trx_commit变量控制日志缓冲区的内容如果写入并刷新到磁盘。innodb_flush_log_at_timeout变量控制日志刷新频率。
+日志缓冲区的内容定期刷新到磁盘（后面会出一片缓存与日志模块的刷脏过程），大的日志缓冲区能够在事务提交前无需写入redo日志数据到磁盘的情况下执行大事务。
+
+
+
+可以通过一些参数来减少磁盘I/O：
+
+> innodb_flush_log_at_trx_commit变量控制日志缓冲区的内容如果写入并刷新到磁盘。
+>
+> innodb_flush_log_at_timeout变量控制日志刷新频率。
+
+
 
 
 
@@ -84,35 +135,26 @@ innodb_flush_log_at_trx_commit变量控制日志缓冲区的内容如果写入�
 
 #### 表
 
-1、创建InnoDB表：即我们常用的create table t.... 会在InnoDB引擎内建表。
+- 创建InnoDB表
+  - 即我们常用的create table t.... 会在InnoDB引擎内建表。
 
-2、创建外表：有点类似hive。创建外表（即在数据目录之外建表）有几种不同的原因，例如：空间管理、I/O优化，或在具有特定性能或容量特征的存储设备上存放表，例如InnoDB支持下列方法来创建外表：
+- 创建外表：
+  - 有点类似hive。创建外表（即在数据目录之外建表）有几种不同的原因，例如：空间管理、I/O优化，或在具有特定性能或容量特征的存储设备上存放表，例如InnoDB支持下列方法来创建外表：
+  - 使用DATA DIRECTORY语句（指定数据目录）`CREATE TABLE t1 (c1 INT PRIMARY KEY) DATA DIRECTORY = '/external/directory';`
+  - 使用CREATE TABLE ... TABLESPACE语法；`CREATE TABLE t2 (c1 INT PRIMARY KEY) TABLESPACE = innodb_file_per_table DATA DIRECTORY = '/external/directory';`
+  - 在外部通用表空间上建表
 
-2-1 使用DATA DIRECTORY语句（指定数据目录）
+- 导入InnoDB表
 
-```
-CREATE TABLE t1 (c1 INT PRIMARY KEY) DATA DIRECTORY = '/external/directory';
-```
 
-﻿
+- 移动或拷贝InnoDB表
 
-2-2 使用CREATE TABLE ... TABLESPACE语法；
 
-```
-CREATE TABLE t2 (c1 INT PRIMARY KEY) TABLESPACE = innodb_file_per_table DATA DIRECTORY = '/external/directory';
-```
+- 将表从MyISAM转换为InnoDB
 
-﻿
 
-2-3 在外部通用表空间上建表
+- InnoDB中的自动增量处理
 
-3、导入InnoDB表
-
-4、移动或拷贝InnoDB表
-
-5、将表从MyISAM转换为InnoDB
-
-6、InnoDB中的自动增量处理
 
 
 
@@ -120,13 +162,17 @@ CREATE TABLE t2 (c1 INT PRIMARY KEY) TABLESPACE = innodb_file_per_table DATA DIR
 
 包括：
 
-1、聚簇索引和二级索引
+- 聚簇索引和二级索引
 
-2、InnoDB索引的物理结构
 
-3、排序索引生成
+- InnoDB索引的物理结构
 
-4、InnoDB全文索引
+
+- 排序索引生成
+
+
+- InnoDB全文索引
+
 
 
 
@@ -134,23 +180,32 @@ CREATE TABLE t2 (c1 INT PRIMARY KEY) TABLESPACE = innodb_file_per_table DATA DIR
 
 InnoDB中包含多种表空间，列举如下：
 
-1、系统表空间（The System Tablespace）
+- 系统表空间（The System Tablespace）
 
-2、File-Per-Table Tablespaces
 
-3、通用表空间（General Tablespaces）
+- File-Per-Table Tablespaces
 
-4、Undo表空间（Undo Tablespaces）
 
-5、临时表空间（Temporary Tablespaces）
+- 通用表空间（General Tablespaces）
 
-6、Server离线时移动表空间文件
 
-7、禁用表空间路径验证
+- Undo表空间（Undo Tablespaces）
 
-8、Linux系统表空间分配优化
 
-9、表空间AUTOEXTEND_SIZE参数设置
+- 临时表空间（Temporary Tablespaces）
+
+
+- Server离线时移动表空间文件
+
+
+- 禁用表空间路径验证
+
+
+- Linux系统表空间分配优化
+
+
+- 表空间AUTOEXTEND_SIZE参数设置
+
 
 
 
@@ -160,7 +215,9 @@ InnoDB中包含多种表空间，列举如下：
 
 如果在页面写入过程中存在操作系统、存储子系统或意外的mysqld进程退出，InnoDB可以在崩溃恢复期间从双写缓冲区中找到页的完好副本。
 
-尽管数据被写入两次，但双写缓冲区不需要两倍的I/O开销或两倍的I/O操作。数据通过一次fsync()函数调用，在一个大的顺序块写入doublewrite缓冲区（除非`innodb_flush_method`被设置为`O_DIRECT_NO_FSYNC`）。
+尽管数据被写入两次，但双写缓冲区不需要两倍的I/O开销或两倍的I/O操作。
+
+数据通过一次fsync()函数调用，在一个大的顺序块写入doublewrite缓冲区（除非`innodb_flush_method`被设置为`O_DIRECT_NO_FSYNC`）。
 
 MySQL 8.0.20版本之前，双写缓冲区存储空间归属于InnoDB的系统表空间。MySQL 8.0.20开始，双写表空间存储区域放在了双写文件中。
 
@@ -215,7 +272,7 @@ redo日志在存储体现上也由两部分组成：
 
 
 
-#### redo log与binlog
+#### redo log与binlog 区别
 
 我们知道，在MySQL中还存在binlog(二进制日志)也可以记录写操作并用于数据的恢复，但二者是有着根本的不同的：
 
