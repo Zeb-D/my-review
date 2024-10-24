@@ -206,8 +206,6 @@ COMPACT 行格式示意图
 
 
 
-
-
 ### 2.3 CHAR(M) 列的存储格式
 
 ​	对于 CHAR(M) 类型的列来说，当采用的是定长编码字符集时，该列占用的字节数不会记录到变长字段长度列表中；而如果采用的是变长编码字符集时，该列占用的字节数会被记录到变长字段长度列表中。
@@ -378,6 +376,36 @@ VALUES
 ﻿![mysql-innodb-page-struct-store-next-record.png](../../image/mysql-innodb-page-struct-store-next-record.png)
 
 ﻿
+
+当然各位也可以通过代码读取：
+
+```
+import os
+
+def get_innodb_page_type():
+    f=open("page_demo.ibd",'rb')
+    # 计算该表空间有多少页,以一页16K计算
+    fsize=os.path.getsize(f.name) // (1024 * 16)
+    # 遍历页数
+    for i in range(fsize):
+        # 每次读16K
+        page=f.read(1024 * 16)
+        # 取File Header中的FIL_PAGE_OFFSET
+        page_offset=page[4:(4+4)].hex()
+        # 取File Header中FIL_PAGE_TYPE
+        page_type=page[24:(24+2)].hex()
+        # 判断是否为数据页
+        if page_type == '45bf':
+            page_level=page[(38+26):(38+26+2)]
+            print("page offset %s, page type <%s>, page level <%s>" %(page_offset,page_type,page_level))
+        else:
+            print("page offset %s, page type <%s>" %(page_offset,page_type))
+
+if __name__ == '__main__':
+	get_innodb_page_type()
+```
+
+
 
 
 
