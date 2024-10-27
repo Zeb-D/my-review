@@ -6,6 +6,13 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 [![知识共享协议（CC协议）](https://img.shields.io/badge/License-Creative%20Commons-DC3D24.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh)[![GitHub stars](https://img.shields.io/github/stars/Zeb-D/my-review.svg?style=flat&label=Star)](https://github.com/Zeb-D/my-review/stargazers)[![GitHub forks](https://img.shields.io/github/forks/Zeb-D/my-review.svg?style=flat&label=Fork)](https://github.com/Zeb-D/my-review/fork)[![GitHub watchers](https://img.shields.io/github/watchers/Zeb-D/my-review.svg?style=flat&label=Watch)](https://github.com/Zeb-D/my-review/watchers)
 
 ------
+个人微信公众号，更多精彩分享到这里：
+![个人微信公众号](./image/a-my-vx-qrcode1.png)
+
+个人微信，欢迎私聊（加v请备注来源）：
+
+![个人微信](./image/a-qrcode_for_gh.jpg)
+
 ### 系统性学习路上
 欢迎各位有志者一起勉行！
 
