@@ -4,11 +4,158 @@
 
 ------
 
-###
+### 序
 
-本文主要通过平常常用的go的一个函数，深入源码，了解其底层到底是如何实现的。
+在平时开发，在日志这块打印碰到最多的输出，包括日志输出、控制输出，但最终还是调用了Println函数，只不过底层用了不同的输出端。
 
-## Println
+那么作为平时经常碰到的这个函数，底层到底有什么？它的设计又是什么，此时我们是有义务`爱它就应该了解它`。
+
+
+
+### 初识
+
+先看看它的有哪些函数，以及我们要研究的是哪些函数。
+
+
+
+#### 函数分类
+
+> **print.go包函数**
+
+```go
+func Fprintf(w io.Writer, format string, a ...interface{}) (n int, err error)
+func Printf(format string, a ...interface{}) (n int, err error)
+func Sprintf(format string, a ...interface{}) string
+
+func Fprint(w io.Writer, a ...interface{}) (n int, err error)
+func Print(a ...interface{}) (n int, err error)
+func Sprint(a ...interface{}) string
+
+func Fprintln(w io.Writer, a ...interface{}) (n int, err error)
+func Println(a ...interface{}) (n int, err error)
+func Sprintln(a ...interface{}) string
+```
+
+根据后缀关键字“f”、“ln”、“”进行归类划分：
+
+1、后缀为 *f* 指定了格式化 format 输出；
+
+2、*ln* 是输出结束换行显示；
+
+3、""空是标准输出
+
+```text
+Println、Fprintln、Sprintln  输出内容时会加上换行符；
+Print、Fprint、Sprint        输出内容时不加上换行符；
+Printf、Fprintf、Sprintf     按照指定格式化文本输出内容。
+```
+
+根据前缀关键字“F”、“S”、“”进行归类划分：
+
+1、前缀为 F 实现`io.Writer`接口类型 输出；
+
+2、前缀为 S 返回一个字符串而没有任何输出；
+
+3、""空是标准输出
+
+```text
+Print、Printf、Println      输出内容到标准输出os.Stdout；
+Fprint、Fprintf、Fprintln   输出内容到指定的io.Writer；
+Sprint、Sprintf、Sprintln   输出内容到字符串。
+```
+
+
+
+> **Print**
+> func Print(a ...interface{})(n int, err error)
+> **a …interface{}**:它包含一些代码中使用的字符串和常量变量。
+> 返回写入的字节数和遇到的任何写入错误
+> **Println**
+> funcPrintln(a ...interface{})(n int, err error)
+> 和Print的参数，返回值一样，唯一不同的是，两个输出之间会进行换行
+> **Sprint**
+> func Sprint(a ...interface{}) string
+> 参数和Print一样，但是不会有任何输出，但是可以把返回的字符串复制给新的变量
+
+
+
+> **Printf、Sprintf、Fprintf 格式化输出详解，对 format 进行分类【**占位符由'%'打头，动词结尾。占位符由五类元素组成： 标志位（flag），宽度，精度，参数索引，以及动词**】**
+
+
+
+#### format分类
+
+**一般类型**
+
+| format 格式 | 解释                     |
+| ----------- | ------------------------ |
+| %v          | 值的默认格式，输出结构体 |
+| %+v         | 输出结构体显示字段名     |
+| %#v         | 输出结构体源代码片段     |
+| %T          | 输出值的类型             |
+| %%          | 输出值并添加百分号       |
+
+**布尔类型**
+
+| format 格式 | 解释          |
+| ----------- | ------------- |
+| %t          | 返回输出 true |
+
+**整数类型**
+
+| format 格式 | 解释                                                         |
+| ----------- | ------------------------------------------------------------ |
+| %b          | 输出标准的二进制格式化                                       |
+| %c          | 输出对应的unicode码的一个字符                                |
+| %d          | 输出标准的十进制格式化                                       |
+| %o          | 输出标准的八进制格式化                                       |
+| %q          | 要输出的值是双引号输出就是双引号字符串；另外一种就是 go 自转义的 unicode 单引号字符 |
+| %x（小写x） | 输出十六进制编码，字母形式为小写 a-f                         |
+| %X（大写X） | 输出十六进制编码，字母形式为大写 A-F                         |
+| %U（大写U） | 输出Unicode格式                                              |
+
+**浮点数与复数**
+
+| format 格式 | 解释                                                   |
+| ----------- | ------------------------------------------------------ |
+| %b          | 无小数部分、二进制指数的科学计数法                     |
+| %e          | 科学计数法（小写e）                                    |
+| %E          | 科学计数法（大写E）                                    |
+| %f          | 十进制小数                                             |
+| %F          | 和%f一样                                               |
+| %g          | 根据实际情况采用%e或%f格式（以获得更简洁、准确的输出） |
+| %G          | 根据实际情况采用%E或%F格式（以获得更简洁、准确的输出） |
+
+**字符串和 []byte**
+
+| format 格式 | 解释                                      |
+| ----------- | ----------------------------------------- |
+| %s          | 输出字符串                                |
+| %q          | 源代码中那样带有双引号的输出              |
+| %x（小写x） | 每个字节用两字符十六进制数表示（使用a-f） |
+| %X（大写X） | 每个字节用两字符十六进制数表示（使用A-F） |
+
+**指针**
+
+| format 格式 | 解释                         |
+| ----------- | ---------------------------- |
+| %p          | 输出十六进制，并加上前导的0x |
+
+**%f 格式**
+
+Go语言中对宽度和有效数字的限定：**%[宽度].[精度]f ；**默认的`%f`输出格式是小数点后要有6位有效数字，不够补后置零
+
+宽度是指整个浮点数的宽度，是指整数位数+小数位数 + 1(小数点算一位)，指定的宽度小于实际宽度或不指定宽度时，以实际宽度展示；当指定宽度大于实际宽度时，按照对齐方式和填充字符来填充。
+
+
+
+#### 小结
+
+以上是一些fmt一些基础知识，但这些函数大多数最终会调用Println函数进行输出，比如格式化函数先拼接好再输出，其他函数大多数是不用输出（不再本次分析范围内）。
+
+
+
+### Println
 
 Println函数接受参数a，其类型为…interface{}。用过Java的对这个应该比较熟悉，Java中也有…的用法。其作用是传入可变的参数，而interface{}类似于Java中的Object，代表任何类型。
 
@@ -26,7 +173,9 @@ func Println(a ...interface{}) (n int, err error) {
 
 当我们再调用这个函数的时候，我们就没有必要再将参数一个一个传给被调用函数了，直接使用a…就可以达到相同的效果。
 
-## Fprintln
+
+
+#### Fprintln
 
 该函数接收参数os.Stdout.write，和需要打印的数据作为参数。
 
@@ -40,7 +189,7 @@ func Fprintln(w io.Writer, a ...interface{}) (n int, err error) {
 }
 ```
 
-### sync.Pool
+#### sync.Pool
 
 从广义上看，newPrinter申请了一个临时对象池。我们逐行来看newPrinter函数做了什么。
 
@@ -62,7 +211,9 @@ func newPrinter() *pp {
 
 sync.Pool是go的临时对象池，用于存储被分配了但是没有被使用，但是未来可能会使用的值。以此来减少 GC的压力。
 
-### ppFree.Get
+
+
+#### ppFree.Get
 
 ppFree.Get()上有大量的注释。
 
@@ -93,7 +244,9 @@ ppFree.Get()上有大量的注释。
 
 然后就返回这个新建的printer给调用方。
 
-## doPrintln
+
+
+#### doPrintln
 
 接下来是doPrintln函数。
 
@@ -128,7 +281,9 @@ func (b *buffer) writeByte(c byte) {
 }
 ```
 
-## printArg
+
+
+#### printArg
 
 从上可以看出，调用printArg函数的时候，传入了两个参数。
 
@@ -140,6 +295,8 @@ func (b *buffer) writeByte(c byte) {
 | JavaScript | string | string |
 | go         | rune   | String |
 | Python     | string | string |
+
+
 
 ### rune
 
@@ -166,7 +323,7 @@ fmt.Println(len(str))         // 12
 fmt.Println(len([]rune(str))) // 8
 ```
 
-### printArg具体实现
+#### printArg具体实现
 
 ```go
 func (p *pp) printArg(arg interface{}, verb rune) {
@@ -249,7 +406,7 @@ func (p *pp) printArg(arg interface{}, verb rune) {
 
 例如，我们传入的是字符串。则接下来就会走到fmtString。
 
-### fmtString
+#### fmtString
 
 从printArg中带来的参数有需要打印的字符串，以及rune类型的’v’。
 
@@ -278,7 +435,7 @@ func (p *pp) fmtString(v string, verb rune) {
 
 `p.fmt.sharpV`在过程中没有被重新赋值，初始化的零值为false。所以下一步会进入fmtS。
 
-### fmtS
+#### fmtS
 
 ```go
 func (f *fmt) fmtS(s string) {
@@ -306,7 +463,9 @@ func (f *fmt) truncateString(s string) string {
 
 而padString则将字符串s写入buffer中，最后调用io的包输出就好了。
 
-## free
+
+
+### free
 
 ```go
 func (p *pp) free() {

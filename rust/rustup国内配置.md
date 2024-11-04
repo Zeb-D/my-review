@@ -14,6 +14,8 @@
 
 之前环境没配置过，在国内网速只有十几kb，一直卡在下载这个环节。
 
+> 环境搭建可以参考：https://www.rust-lang.org/zh-CN/learn/get-started
+
 
 
 ### 目标
