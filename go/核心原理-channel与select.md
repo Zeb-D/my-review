@@ -6,9 +6,47 @@
 
 > 本文会尝试解释 go runtime 中 channel 和 select 的具体实现，部分内容来自 gophercon2017。Go版本为1.8.3
 
-## 1. 结构概览
 
-### 1.1. hchan
+
+### 0. 序
+
+本篇文章的目的是深入理解channel与select的原理，毕竟面试的火箭离不开这些；
+
+#### 0.1. 基本用法
+
+在之前的一片入门文章演示了channel与select 用法的代码见[golang 常见语法入门](https://mp.weixin.qq.com/s?__biz=Mzg5NDc0Mzc4MQ==&mid=2247483919&idx=1&sn=7cbde0c0d2f3336dad204e46b95fd46c&chksm=c01ba785f76c2e930846666c2e0f016e926e2474108326f69e94ee077e98dd413b772c84e134&token=436708120&lang=zh_CN#rd)。
+
+
+
+#### 0.2. 常见面试碰到的问题
+
+这次直接抛出问题，这里不会直接给出答案，答案都在在漫长的解析之中，如果直接给出答案，后面题目问的发生变化下，估计又不知道的。
+
+
+
+Q1：简单题，对已经关闭的channel进行放入、取出数据，会发生什么行为？
+
+Q2：有缓冲的channel 什么场景下会被阻塞？
+
+Q3：中等题，channel的数据结构是什么？有哪些关键的数据结构？
+
+Q4：channel 的buf 怎么保证放和取的顺序的？
+
+Q5：channel 怎么保证高性能的？
+
+Q6：高阶题，channel 是怎么存储对象的？这些对象放到哪块内存(栈、堆等)？什么情况不需要copy到堆中？
+
+Q7：channel 协程等待是饥饿的吗？有不饥饿的阻塞吗？
+
+
+
+> 这些答案可以通过后台/留言进行交流，甚至可以主动让我充当*golang技术面试官*
+
+
+
+### 1. 结构概览
+
+#### 1.1. hchan
 
 这个就是channel的结构体了
 
@@ -28,7 +66,7 @@ type hchan struct {
 }
 ```
 
-### 1.2. waitq
+#### 1.2. waitq
 
 ```go
 type waitq struct {
@@ -37,7 +75,7 @@ type waitq struct {
 }
 ```
 
-### 1.3. sudog
+#### 1.3. sudog
 
 sudog 代表了一个在等待中的g
 
@@ -67,7 +105,7 @@ type sudog struct {
 }
 ```
 
-### 1.4. hcase
+#### 1.4. hcase
 
 这个是 select 中一个case生成的结构体
 
@@ -93,11 +131,11 @@ type scase struct {
 2. 如果send，流程跟recv是一样的
 3. 如果此时 channel 被close了，唤醒所有等待的队列 （sendq 或 recvq）里面的等待的g，告诉他们channel.close = true
 
-## 2. 源码分析
+### 2. 源码分析
 
-### 2.1. 收发
+#### 2.1. 收发
 
-#### 2.1.1. main
+##### 2.1.1. main
 
 我们使用 go tool 工具分析一下，channel 生成， c <- i， <- c 在底层都是通过什么方法实现的
 
@@ -142,7 +180,7 @@ func main() {
 - closechan: close(c1) 时调用的函数，关闭channel使用
 - chansend1: c1 <- 1 时，也就是发送数据用到的函数
 
-#### 2.1.2. makechan
+##### 2.1.2. makechan
 
 创建channel这一块主要就是给结构体和bug缓冲池分配内存，然后初始化一下hchan的结构体
 
@@ -194,7 +232,7 @@ func makechan(t *chantype, size int) *hchan {
 }
 ```
 
-#### 2.1.3. chanrecv1
+##### 2.1.3. chanrecv1
 
 `chanrecv1` 调用了`chanrecv` 实现，`chanrecv` 监听channel并接收 channel里面的数据，并写入到 ep 里面
 
@@ -294,7 +332,7 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
 
 接下来分析的 `recv` 这个方法就能理解了
 
-##### 2.1.3.1. recv
+###### 2.1.3.1. recv
 
 ```go
 func recv(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
@@ -342,7 +380,7 @@ func recv(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
 
 结合上面的逻辑就发现，g在被唤醒之前，跟g相关的sudog的数据就已经被channel使用掉了，所以当g被唤醒时，无需处理跟数据传输相关的逻辑了
 
-##### 2.1.3.2. acquireSudog
+###### 2.1.3.2. acquireSudog
 
 获取一个sudog的结构，这里跟cache和scheduler调度待运行g的队列一样，使用了 p sched 的两级缓存，也就是本地缓存一个sudog的数组，同时在全局的 sched结构上面也维护了一个sudogcache的链表，当p本地的sudog不足或者过多的时候，就去跟全局的sched 进行平衡
 
@@ -381,7 +419,7 @@ func acquireSudog() *sudog {
 }
 ```
 
-##### 2.1.3.3. releaseSudog
+###### 2.1.3.3. releaseSudog
 
 `releaseSudog` 就是释放当前使用的sudog，并平衡p本地缓存的sudog和全局队列的sudog
 
@@ -416,7 +454,7 @@ func releaseSudog(s *sudog) {
 }
 ```
 
-#### 2.1.4. chansend1
+##### 2.1.4. chansend1
 
 发送逻辑跟接收的逻辑差不多
 
@@ -499,7 +537,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 }
 ```
 
-##### 2.1.4.1. send
+###### 2.1.4.1. send
 
 `send` 跟 `recv` 的逻辑也是大致相同的，而且因为从recvq里面拿到了一个sudog，所以说明缓冲区为空，那么`send`方法就不需要考虑往缓冲区添加数据了，`send`比`recv`更加简单，只需要交换数据、唤醒g即可
 
@@ -519,7 +557,7 @@ func send(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
 }
 ```
 
-#### 2.1.5. closechan
+##### 2.1.5. closechan
 
 收发数据已经结束了，最后就是关闭channel了
 
@@ -599,13 +637,13 @@ chan close之后，所有阻塞的recvq 和 sendq（recvq和sendq只有有一个
 
 
 
-#### 2.1.6 recvq和sendq 结构
+##### 2.1.6 recvq和sendq 结构
 
 recvq和sendq基本上是链表，看起来基本如下
 
 ![go-channl-sudog-struct.jpeg](../image/go-channl-sudog-struct.jpeg)
 
-#### 2.1.7. 小结
+##### 2.1.7. 小结
 
 语言的表述总是苍白的，在网上找资料的时候正好看到了两张流程图，可以结合着来看
 
@@ -645,9 +683,9 @@ recvq和sendq基本上是链表，看起来基本如下
 
 
 
-### 2.2. select
+#### 2.2. select
 
-#### 2.2.1. main
+##### 2.2.1. main
 
 channel的收发流程在上面已经追踪了，流程也已经清晰了，但是跟channel一起使用的还有一个select，那select的流程又是什么呢
 
@@ -764,7 +802,7 @@ func main() {
 
 好了，我们开始从 `selectgo` 开始跟踪了，但是跟踪selectgo之前，我们需要选跟踪一下 `reflect_rselect` ， 不然看着 `selectgo` 函数的参数，完全就是一脸懵逼啊
 
-#### 2.2.2. reflect_rselect
+##### 2.2.2. reflect_rselect
 
 ```go
 func reflect_rselect(cases []runtimeSelect) (int, bool) {
@@ -791,7 +829,7 @@ func reflect_rselect(cases []runtimeSelect) (int, bool) {
 }
 ```
 
-#### 2.2.3. selectgo
+##### 2.2.3. selectgo
 
 ```go
 func selectgo(cas0 *scase, order0 *uint16, ncases int) (int, bool) {
@@ -1123,7 +1161,7 @@ sclose:
 }
 ```
 
-#### 2.2.4. selectnbrecv
+##### 2.2.4. selectnbrecv
 
 当一个select里面只有一个 case，且这个case 是接收数据的操作的时候，select就会调用 `selectnbrecv` 函数来实现
 
@@ -1136,7 +1174,7 @@ func selectnbrecv(elem unsafe.Pointer, c *hchan) (selected bool) {
 
 这里就会发现 `selectnbrecv` 就是调用了 `chanrecv` 来实现，也就是我们上面解析的 `<- c1` 是一样的，就相当于 select 退变 成单独的 `<- c` 的表达了
 
-#### 2.2.5. selectnbsend
+##### 2.2.5. selectnbsend
 
 同 `selectnbrecv` 一样，当select只有一个case，且这个case是发送数据到channel的，就会退变成 `c <- 1` 的表达了
 
@@ -1146,7 +1184,7 @@ func selectnbsend(c *hchan, elem unsafe.Pointer) (selected bool) {
 }
 ```
 
-#### 2.2.6. 小结
+##### 2.2.6. 小结
 
 所以，select的流程大致如下
 
@@ -1156,11 +1194,15 @@ func selectnbsend(c *hchan, elem unsafe.Pointer) (selected bool) {
 4. 如果某个sudog被临幸，然后被唤醒了，清空所有sudog的数据等属性，并把其他的sudog从队列中移除
 5. 至此，一个select操作结束
 
-## 3. 总结
+
+
+### 3. 总结
 
 我还是很像吐槽一下，`selectgo` 函数华丽丽的写了300多行，里面还使用了若干的 `goto` 去进行跳转，真的不可以分拆一下吗，不过大神的代码，还是真的需要膜拜的
 
-## 4. 参考文档
+
+
+### 4. 参考文档
 
 - 《Go语言学习笔记》-- 雨痕
 - [Go Channel 源码剖析](https://link.segmentfault.com/?enc=bqvAPJirCUObMdWZW77LJA%3D%3D.RDz0FfCdZVF6GyO499TnnfpjcHhBOYTkNCuaJ640kbnTnEr117r%2ByNZyVAb%2B2wGQl%2FdJ4BQZie6wOuiqzzlx%2BQ%3D%3D)

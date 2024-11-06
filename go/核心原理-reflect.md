@@ -4,7 +4,7 @@
 
 ------
 
-## 一、背景
+### 背景
 
 reflect包是个神器，每种工具(方法)都有自己空间时间取舍，不同的方法会有自己的使用范围；
 
@@ -62,11 +62,11 @@ go语言的类型系统是非常重要的，你掌握的程度在一定程度上
 
 
 
-## 二、概念与原理
+### 概念与原理
 
 变量是由两部分组成：变量的类型和变量的值。
 
-### 简单示例
+#### 简单示例
 
 我想知道一个struct对象，有什么field？我们可以简单实用`reflect.TypeOf`实现些；
 
@@ -93,7 +93,7 @@ f1,0,string
 
 
 
-### 类型和值
+#### 类型和值
 
 `reflect.Type`和`reflect.Value`是反射的两大基本要素，他们的关系如下：
 
@@ -342,8 +342,6 @@ type Value struct {
 
 
 
-
-
 ##### value的实现原理
 
 ```go
@@ -553,15 +551,19 @@ PASS
 
 
 
-### 三、高级用法
+### 高级用法
 
-##### 常见用法
+#### 常见用法
 
 可参考[reflect_unsafe_test.go](https://github.com/Zeb-D/go-util/blob/master/todo/reflect_unsafe_test.go)，主要学习常用方法调用如`TestValue`和`TestType`；
 
-#### `reflect.TypeOf` + `uintptr`+`unsafe.Pointer`
+`reflect.TypeOf` + `uintptr`+`unsafe.Pointer`
+
+
 
 此处代码请看[reflect_uintptr_test.go](https://github.com/Zeb-D/go-util/blob/master/todo/reflect_uintptr_test.go)，此处参考了`json-iterator/go`开源代码；
+
+
 
 ##### reflect_struct
 
@@ -694,7 +696,7 @@ PASS
 
 
 
-#### reflect 一些util
+##### reflect 一些util
 
 在本章的Value小节中[Value入门用法](#Value入门用法)，通过reflect进行创建slice type，进而Append；
 
@@ -849,7 +851,7 @@ type T2 struct {
 
 
 
-###### 实战：
+###### 实战
 
 ```
 type Part1 struct {
@@ -906,5 +908,7 @@ type Part1 struct {
 
 ###### **结果**
 
+```
 Part1 内存布局：axxx|bbbb|cxxx|xxxx|dddd|dddd|exxx|xxxx
+```
 
