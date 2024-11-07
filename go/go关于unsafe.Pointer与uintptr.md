@@ -8,6 +8,8 @@
 
 如果看了不少go底层代码如`reflect`，或者一些github上大佬写的开源项目，会发现有不少`地方使用了 unsafe.Pointer 和 uintptr`；
 
+
+
 单从类型名称看，这些与“指针”是不是有什么关系？或者它们之间又有什么区别？
 
 
@@ -18,9 +20,19 @@
 
 
 
-### 普通指针类型
+### 概念
 
-我们一般将 *T 看作指针类型，表示一个指向 T 类型变量的指针。我们都知道 Go 是强类型语言，声明变量之后，变量的类型是不可以改变的，不同类型的指针也不允许相互转化。例如下面这样：
+#### 普通指针(*T)
+
+> 普通指针类型，用于传递对象地址，不能进行指针运算； 可以用 &(取地址) *(根据地址取值)。
+>
+> 我们一般将 *T 看作指针类型，表示一个指向 T 类型变量的指针。
+
+
+
+我们都知道 Go 是强类型语言，声明变量之后，变量的类型是不可以改变的，不同类型的指针也不允许相互转化。
+
+简单示例如下：
 
 ```
 func main(){
@@ -33,32 +45,56 @@ func main(){
 }
 ```
 
-编译报错：cannot convert iPtr1 (type *int) to type *int64，提示不能进行强制转化。
+> 编译报错：cannot convert iPtr1 (type *int) to type *int64，提示不能进行强制转化。
+>
+
+
 
 那怎么办，如何实现相互转化？
 
-还好 Go 官方提供了 unsafe 包，有相关的解决方案。
+> 还好 Go 官方提供了 unsafe 包，有相关的解决方案。
+>
 
 
 
-### unsafe.Pointer
+#### unsafe.Pointer
 
-unsafe.Pointer **通用指针类型**，一种特殊类型的指针，可以包含任意类型的地址，能实现不同的指针类型之间进行转换，类似于 C 语言里的 void* 指针。
+> unsafe.Pointer可以指向任意类型的指针。
+> 不能进行指针运算，不能读取内存存储的值(想读取的话需要转成相对应类型的指针)。
+> 它是桥梁，让任意类型的指针实现相互转换, 也可以转换成uintptr 进行指针运算。
 
-```
-type ArbitraryType int
+unsafe.Pointer 通用指针类型，一种特殊类型的指针，可以包含任意类型的地址，能实现不同的指针类型之间进行转换，类似于 C 语言里的 void* 指针。
 
+
+
+unsafe.Pointer 在源码文档是这么说的：
+
+```go
 type Pointer *ArbitraryType
+
+Pointer represents a pointer to an arbitrary type. There are four special operations
+available for type Pointer that are not available for other types:    //  Pointer代表了一个任意类型的指针。Pointer类型有四种特殊的操作是其他类型不能使用的:
+   - A pointer value of any type can be converted to a Pointer.       //  任意类型的指针可以被转换为Pointer
+   - A Pointer can be converted to a pointer value of any type.       //  Pointer可以被转换为任务类型的值的指针
+   - A uintptr can be converted to a Pointer.                         //  uintptr可以被转换为Pointer
+   - A Pointer can be converted to a uintptr.                         //  Pointer可以被转换为uintptr
+Pointer therefore allows a program to defeat the type system and read and write
+arbitrary memory. It should be used with extreme care.                //  因此Pointer允许程序不按类型系统的要求来读写任意的内存，应该非常小心地使用它。
 ```
 
 从定义可以看出，Pointer 实际上是 *int。
 
+
+
 官方文档里还描述了 Pointer 的四种操作规则：
 
-1. 任何类型的指针都可以转化成 unsafe.Pointer；
-2. unsafe.Pointer 可以转化成任何类型的指针；
-3. uintptr 可以转换为 unsafe.Pointer；
-4. unsafeP.ointer 可以转换为 uintptr；
+> 1. 任何类型的指针都可以转化成 unsafe.Pointer；
+> 2. unsafe.Pointer 可以转化成任何类型的指针；
+> 3. uintptr 可以转换为 unsafe.Pointer；
+> 4. unsafeP.ointer 可以转换为 uintptr；
+>
+
+
 
 不同类型的指针允许相互转化实际上是运用了第 1、2 条规则，我们就着例子看下：
 
@@ -71,15 +107,11 @@ func main(){
 
  *iPtr2 = 8
 
- fmt.Println(i)
+ fmt.Println(i) //输出 8
 }
 ```
 
-输出：
 
-```
-8
-```
 
 上面的代码，我们可以把 *int 转为 *int64，并且对新的 *int64 进行操作，从输出会发现 i 的值被改变了。
 
@@ -89,17 +121,31 @@ func main(){
 
 看看第 3、4 条规则，uintptr 就可以派上用场了。
 
-### uintptr
+
+
+#### uintptr
+
+> uintptr是一个无符号的整型，它可以保存一个指针地址。
+>
+> 它可以进行指针运算。
+>
+> uintptr无法持有对象, GC不把uintptr当指针, 所以uintptr类型的目标会被回收。
+>
+> 想取值需要转成unsafe.Pointer后, 需再转到相对应的指针类型。
+
+
 
 源码定义：
 
-```
-// uintptr is an integer type that is large enough to hold the bit pattern of
-// any pointer.
+```go
+package builtin
+
+//uintptr is an integer type that is large enough to hold the bit pattern of any pointer.
+//uintptr是一个能足够容纳指针位数大小的整数类型
 type uintptr uintptr
 ```
 
-uintptr 是 Go 内置类型，表示无符号整数，可存储一个完整的地址。常用于指针运算，只需将 unsafe.Pointer 类型转换成 uintptr 类型，做完加减法后，转换成 unsafe.Pointer，通过 * 操作，取值或者修改值都可以。
+
 
 下面是一个通过指针偏移修改结构体成员的例子，演示下 uintptr 的用法：
 
@@ -119,27 +165,23 @@ func main(){
 
  *name = "Yd"
 
- fmt.Println(*ptr)
+ fmt.Println(*ptr) // {Yd 18}
 
  age := (*int)(unsafe.Pointer(uintptr(unsafe.Pointer(ptr)) + unsafe.Offsetof(ptr.Age)))  // 2
  *age = 35
 
- fmt.Println(*ptr)
+ fmt.Println(*ptr) // {Yd 35}
 }
 ```
 
-输出：
 
-```
-{Yd 18}
-{Yd 35}
-```
 
-特别提下，**unsafe.Offsetof** 的作用是返回成员变量 x 在结构体当中的偏移量，即返回结构体初始内存地址到 x 之间的字节数。
+特别提下，`unsafe.Offsetof `的作用是返回成员变量 x 在结构体当中的偏移量，即返回结构体初始内存地址到 x 之间的字节数。
 
-​	1 因为**结构体初始地址就是第一个成员的地址**，又 Name 是结构体第一个成员变量，所以此处不用偏移，我们拿到 admin 的地址，然后通过 unsafe.Pointer 转为 *string，再进行赋值操作即可。
-
-​	2 成员变量 Age 不是第一个字段，想要修改它的值就需要内存偏移。我们先将 admin 的指针转化为 uintptr，再通过 unsafe.Offsetof() 获取到 Age 的偏移量，两者都是 uintptr，进行相加指针运算获取到成员 Age 的地址，最后需要将 uintptr 转化为 unsafe.Pointer，再转化为 *int，才能对 Age 操作。
+> ​	1、因为结构体初始地址就是第一个成员的地址，又 Name 是结构体第一个成员变量，所以此处不用偏移，我们拿到 admin 的地址，然后通过 `unsafe.Pointer` 转为 *string，再进行赋值操作即可。
+>
+> ​	2、成员变量 Age 不是第一个字段，想要修改它的值就需要内存偏移。我们先将 admin 的指针转化为 uintptr，再通过 `unsafe.Offsetof() `获取到 Age 的偏移量，两者都是 uintptr，进行相加指针运算获取到成员 Age 的地址，最后需要将 uintptr 转化为 `unsafe.Pointer`，再转化为 *int，才能对 Age 操作。
+>
 
 
 
@@ -149,7 +191,16 @@ Go 有两样东西或多或少是无类型指针的表示：uintptr 和 unsafe.P
 
 从表面上看这有点奇怪，因为 unsafe.Pointer 和 uintptr 可以彼此来回转换。为什么不只有一种指针表现形式？两者之间有什么区别？
 
-表面的区别是可以对 uintptr 进行算数运算，但不能对 unsafe.Pointer（或任何其他 Go 指针）进行运算。
+
+
+uintptr和unsafe.Pointer的区别在哪里？
+
+> - unsafe.Pointer只是单纯的通用指针类型，用于转换不同类型指针，它不可以参与指针运算；
+> - 而uintptr是用于指针运算的，GC 不把 uintptr 当指针，也就是说 uintptr 无法持有对象， uintptr 类型的目标会被回收；
+> - unsafe.Pointer 可以和 普通指针 进行相互转换；
+> - unsafe.Pointer 可以和 uintptr 进行相互转换。
+
+
 
 unsafe 包的文档指出了重要的区别：
 
@@ -158,6 +209,8 @@ unsafe 包的文档指出了重要的区别：
 > 将 Pointer 转换为 uintptr 会创建一个没有指针语义的整数值。
 >
 > 即使 uintptr 持有某个对象的地址，如果对象移动，垃圾收集器并不会更新 uintptr 的值，uintptr 也无法阻止该对象被回收。
+
+
 
 尽管 unsafe.Pointer 是通用指针，但 Go 垃圾收集器知道它们指向 Go 对象；
 
@@ -190,7 +243,6 @@ unsafe 包的文档指出了重要的区别：
 
 
 
-参考资料：
+https://segmentfault.com/a/1190000041943947?utm_source=sf-similar-article
 
-https://mp.weixin.qq.com/s/NG0k9KpBry9bC_m30tmu1A
-
+https://www.cnblogs.com/gwyy/p/13137967.html
