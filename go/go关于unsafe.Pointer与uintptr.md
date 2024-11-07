@@ -4,11 +4,23 @@
 
 ------
 
+### 序
+
+可能有人会问，既然有reflect神器，为什么还要这种unsafe门户大开的不安全行为呢？
+
+在[golang reflect神器——这篇不枯燥 很好理解](https://mp.weixin.qq.com/s?__biz=Mzg5NDc0Mzc4MQ==&mid=2247483989&idx=1&sn=4450b39756900eee2eacc2edcce136c4&chksm=c01ba7dff76c2ec90c3f057d6fe97dec3f86d691ed483a865cc1e09973ea7a7d30c998d36242&token=511696912&lang=zh_CN#rd) 有个列子，只能对那些大写的属性/方法才能进行反射使用，如果要更深次做点其它的，那么本文聊的这些可以涉及到这些。
+
+在这篇文章最后也讲到了 `reflect.TypeOf + uintptr+unsafe.Pointer` 可以做比较多的组合动作，但没讲这几者联系。
+
+unsafe在一些深度层次的内存优化方面是个神器，比如内存对齐(减少内存)与高性能是有一定的关系。
+
+注：unsafe并不是golang单独有的功能，java与rust都该功能（大道统一）。
+
+
+
 ### 背景
 
 如果看了不少go底层代码如`reflect`，或者一些github上大佬写的开源项目，会发现有不少`地方使用了 unsafe.Pointer 和 uintptr`；
-
-
 
 单从类型名称看，这些与“指针”是不是有什么关系？或者它们之间又有什么区别？
 
@@ -185,7 +197,7 @@ func main(){
 
 
 
-### 区别
+#### 区别
 
 Go 有两样东西或多或少是无类型指针的表示：uintptr 和 unsafe.Pointer （和外表相反，它们是内置类型）。
 
@@ -212,9 +224,12 @@ unsafe 包的文档指出了重要的区别：
 
 
 
+接下来让我们慢慢地重点理解GC这块领域知识：
+
 尽管 unsafe.Pointer 是通用指针，但 Go 垃圾收集器知道它们指向 Go 对象；
 
-换句话说，它们是真正的 Go 指针。通过内部魔法，垃圾收集器可以并且将使用它们来防止活动对象被回收并发现更多活动对象（如果 unsafe.Pointer 指向的对象自身持有指针）。
+> 换句话说，它们是真正的 Go 指针。通过内部魔法，垃圾收集器可以并且将使用它们来防止活动对象被回收并发现更多活动对象（如果 unsafe.Pointer 指向的对象自身持有指针）。
+>
 
 因此，对 unsafe.Pointer 的合法操作上的许多限制归结为“在任何时候，它们都必须指向真正的 Go 对象”。
 
@@ -232,7 +247,7 @@ unsafe 包的文档指出了重要的区别：
 
 
 
-### 总结
+#### 小结
 
 这篇文章我们简单介绍了普通指针类型、unsafe.Pointer 和 uintptr 之间的关系（见文章开头关系图），记住两点：
 
@@ -243,6 +258,355 @@ unsafe 包的文档指出了重要的区别：
 
 
 
-https://segmentfault.com/a/1190000041943947?utm_source=sf-similar-article
 
-https://www.cnblogs.com/gwyy/p/13137967.html
+
+### 常见面试
+
+#### 字符串地址占用了几个字节？
+
+如果我们数一下大约有 40位二进制，那么是 5个字节？
+正确答案是8个字节，我们可以转为unsafe.Pointer然后使用size方法打印出来
+
+```go
+func TestPtr(t *testing.T) {
+    s := "hello ptr"
+    fmt.Printf("s的地址为%p ,地址的10进制表示为%d 值为%s \n", &s, &s, s)
+    fmt.Printf("s地址的2进制表示为%b \n", &s)
+
+    var p unsafe.Pointer
+    p = unsafe.Pointer(&s)
+    fmt.Printf("p地址的2进制表示为%b \n", p)
+    size := unsafe.Sizeof(p)
+    fmt.Printf("p地址的大小为几个字节 %d \n", size)
+}
+输出为：
+s的地址为0xc00008e4d0 ,地址的10进制表示为824634303696 值为hello ptr 
+s地址的2进制表示为1100000000000000000010001110010011010000 
+p地址的2进制表示为1100000000000000000010001110010011010000 
+p地址的大小为几个字节 8 
+```
+
+
+
+#### 如何对小写属性进行修改值
+
+其实在上面的代码`uintptr` 也讲了，但只不过用的大写属性，但这次换个结构体来验证该功能。
+
+```css
+f := unsafe.Pointer(uintptr(unsafe.Pointer(&s)) + unsafe.Offsetof(s.f))
+// 等价于 f := unsafe.Pointer(&s.f)
+```
+
+指针的运算思想是：第一个的地址+偏移量(unsafe.Offsetof) 得到偏移后的地址。
+
+```reasonml
+func TestPointer2(t *testing.T) {
+    var abc struct {
+        a bool
+        b int32
+        c []int
+    }
+    //1 结构体abc的地址为
+    fmt.Println(unsafe.Pointer(&abc))
+    //2 结构体abc.a 的地址为
+    fmt.Println(unsafe.Pointer(&abc.a))
+    //3 指针运算得出 abc.a的地址为
+    fmt.Println(unsafe.Pointer(uintptr(unsafe.Pointer(&abc)) + unsafe.Offsetof(abc.a)))
+}
+输出为：
+=== RUN   TestPointer2
+0xc00008e060
+0xc00008e060
+0xc00008e060
+0xc00008e064
+0xc00008e064
+--- PASS: TestPointer2 (0.00s)
+```
+
+1. 我们可以得出结构体的地址为，第一个元素的地址
+2. 结构体的指针运算 没问题
+
+
+
+#### 取出unsafe内存外的数据会怎么样？
+
+我们以数组为例子：取出index为10，公共才有4，超出了数组的范围
+
+```stylus
+func TestPointer4(t *testing.T) {
+    var i [4]uint32 = [4]uint32{}
+    //5 通过指针运算 最后一个 数组i[3] 的地址为
+    fmt.Println(unsafe.Pointer(uintptr(unsafe.Pointer(&i)) + 3*unsafe.Sizeof(i[0])))
+    //6 超出的数组元素的范围会发生什么？--得到一个数组外其他内容的地址
+    fmt.Println(unsafe.Pointer(uintptr(unsafe.Pointer(&i)) + 10*unsafe.Sizeof(i[0])))
+}
+输出：
+=== RUN   TestPointer4
+0xc00011e1cc
+0xc00011e1e8
+--- PASS: TestPointer4 (0.00s)
+```
+
+当我们试图打印超出的地址的内容时候，会报错！需要注意
+
+
+
+### unsafe源码介绍
+
+#### unsafe包常用方法
+
+```go
+type ArbitraryType int
+type Pointer *ArbitraryType
+func Alignof(x ArbitraryType) uintptr
+func Offsetof(x ArbitraryType) uintptr
+func Sizeof(x ArbitraryType) uintptr
+```
+
+1. Alignof返回变量对齐字节数量
+2. Offsetof返回变量指定属性的偏移量，所以如果变量是一个struct类型，不能直接将这个struct类型的变量当作参数，只能将这个struct类型变量的属性当作参数。
+3. Sizeof 返回变量在内存中占用的字节数，切记，如果是slice，则不会返回这个slice在内存中的实际占用长度。
+
+关于返回值 uintptr类型 在go源代码里
+
+```go
+type uintptr uintptr
+```
+
+uintptr 是一个整数类型，它足够大，可以存储. 只有将Pointer转换成uintptr才能进行指针的相关操作。
+
+uintptr是可以用于指针运算的，但是GC并不把uintptr当做指针，所以uintptr不能持有对象, 可能会被GC回收, 导致出现无法预知的错误. Pointer指向一个对象时, GC是不会回收这个内存的。
+
+
+
+#### ArbitraryType 任意类型
+
+ArbitraryType 表示任意类型，如同interface{}，因为用来存储指针地址的，所以相当于存储任意类型。
+
+```ada
+type ArbitraryType int
+```
+
+
+
+#### Pointer 指针类型
+
+unsafe中，ArbitraryType任意类型的的指针类型就是Pointer类型。
+
+可以将其他类型都转换过来，然后通过这三个函数，分别能取长度，偏移量，对齐字节数，就可以在内存地址映射中，来回游走。
+
+我们可以用强制类型转化type(a)语法把任意一个指针类型转成`unsafe.Pointer(a)`
+语法如下：
+
+```reasonml
+func TestPointer(t *testing.T) {
+    //把一个int类型强制转成 unsafe.Pointer 任意type指针类型
+    var i int = 10
+    fmt.Println(unsafe.Pointer(&i)) //0xc0000a61a8
+
+    //把一个string类型强制转成 unsafe.Pointer 任意type指针类型
+    var s string = "hello"
+    fmt.Println(unsafe.Pointer(&s)) //0xc00008e4f0
+
+    //把一个array类型强制转成 unsafe.Pointer 任意type指针类型
+    var a [5]int = [5]int{0, 1, 2, 3, 4}
+    fmt.Println(unsafe.Pointer(&a)) //0xc0000b0030
+
+    //把一个map类型强制转成 unsafe.Pointer 任意type指针类型
+    var m map[string]int8 = map[string]int8{"a": 1, "b": 10, "c": 20, "d": 30}
+    fmt.Println(unsafe.Pointer(&m)) //0xc0000a0028
+
+    //把一个slice类型强制转成 unsafe.Pointer 任意type指针类型
+    var sli []int8 = []int8{0, 1, 3, 4, 5, 6}
+    fmt.Println(unsafe.Pointer(&sli)) //0xc0000b40a0
+
+    //把一个struct类型强制转成 unsafe.Pointer 任意type指针类型
+    type st struct {
+        w int8
+        h int8
+    }
+    var st1 = st{
+        w: 40,
+        h: 50,
+    }
+    fmt.Println(unsafe.Pointer(&st1)) //0xc0000a61b6
+}
+```
+
+
+
+#### Sizeof 占用的内存大小
+
+##### int等数字类型占用的内存大小
+
+```reasonml
+func TestSizeofInt(t *testing.T) {
+    //int8,int16,int32,int64,int类型占用的内存地址
+    var i8 int8 = 10
+    var i16 int16 = 10
+    var i32 int32 = 10
+    var i64 int64 = 10
+    var i int = 10
+    fmt.Println(unsafe.Sizeof(i8), unsafe.Sizeof(i16), unsafe.Sizeof(i32), unsafe.Sizeof(i64), unsafe.Sizeof(i))
+    //输出为 1 2 4 8 8
+
+    //uint8,uint16,uint32,uint64,uint类型占用的内存地址
+    var u8 uint8 = 10
+    var u16 uint16 = 10
+    var u32 uint32 = 10
+    var u64 uint64 = 10
+    var u uint = 10
+    fmt.Println(unsafe.Sizeof(u8), unsafe.Sizeof(u16), unsafe.Sizeof(u32), unsafe.Sizeof(u64), unsafe.Sizeof(u))
+    //输出为 1 2 4 8 8
+}
+```
+
+| 类型type      | 占用内存大小bit | 占用内存大小byte字节 |
+| ------------- | --------------- | -------------------- |
+| int8、uint8   | 8               | 1                    |
+| int16、uint16 | 16              | 2                    |
+| int32、uint32 | 32              | 4                    |
+| int64、uint64 | 64              | 8                    |
+| int、uint     | 64              | 8                    |
+
+注意：int，uint是根据cpu来的，我这里是64位的cpu，所以这里占用了64bit内存，也有32位，16位的。
+
+
+
+##### string类型占用的内存大小
+
+```stylus
+func TestSizeofString(t *testing.T) {
+    //string类型占用的内存地址
+    var s string = "a"
+    fmt.Println(unsafe.Sizeof(s)) //16
+
+    //string类型编译后的存储类型为StringHeader,我们可以强制转化看一下
+    stringHeader := (*reflect.StringHeader)(unsafe.Pointer(&s))
+    fmt.Println(unsafe.Sizeof(stringHeader.Data)) //8
+    fmt.Println(unsafe.Sizeof(stringHeader.Len))  //8
+
+    byteStr := (*byte)(unsafe.Pointer(stringHeader.Data))
+    fmt.Println(byteStr)                 //0x11435f6 存储"a"的地址
+    fmt.Println(*byteStr)                //97 十进制97
+    fmt.Println(string(*byteStr))        // "a" 字符串a
+    fmt.Printf("%b", *byteStr)           //1100001 二进制标识的97
+    fmt.Println(unsafe.Sizeof(*byteStr)) //1 "a"存储占用的内存地址为1个字节
+}
+```
+
+我们保存一个string类型的变量s，值为”a“
+问题：此时使用unsafe.Sizeof(s)函数，得出内存占用为16个字节，为什么不是1？
+答案：因为s在编译后的类型为 reflect.StringHeader 如下结构
+
+```elm
+type StringHeader struct {
+    Data uintptr
+    Len  int
+}
+```
+
+此时我们unsafe.Sizeof(s)，其实是unsafe.Sizeof(StringHeader)
+
+因为StringHeader.Data为uintptr类型占用8个字节，存储的字符串值的内存地址
+
+StringHeader.Len为int类型也占用8个字节，所以总共16字节。
+
+
+
+##### slice类型占用内存大小
+
+```stylus
+func TestSizeofSlice(t *testing.T) {
+    //slice类型占用内存地址
+    var sli []int8 = []int8{0, 1, 2, 3, 4, 5}
+    fmt.Println(unsafe.Sizeof(sli)) //24
+
+    sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&sli))
+    fmt.Println(unsafe.Sizeof(sliceHeader.Data)) //8 uintptr类型
+    fmt.Println(unsafe.Sizeof(sliceHeader.Len))  //8 int类型
+    fmt.Println(unsafe.Sizeof(sliceHeader.Cap))  //8 int类型
+}
+```
+
+
+
+##### 自定义struct占用内存大小
+
+```stylus
+func TestSizeofStruct(t *testing.T) {
+    //struct类型占用的内存地址
+    type arrT struct {
+        v [100]int8
+    }
+    type ST struct {
+        b     byte
+        i8    int8
+        sli   []int8
+        s     string
+        arrSt arrT
+    }
+
+    st := ST{
+        b:     1,
+        i8:    127,
+        sli:   []int8{0, 1, 2, 3, 4},
+        s:     "hello",
+        arrSt: arrT{v: [100]int8{5, 6, 7, 8}},
+    }
+    fmt.Println(unsafe.Sizeof(st))       //152 为结构体各个字段的内存之和
+    fmt.Println(unsafe.Sizeof(st.b))     //1 byte类型和uint8 一样占用1个字节
+    fmt.Println(unsafe.Sizeof(st.i8))    //1 int8类型占用1个字节
+    fmt.Println(unsafe.Sizeof(st.sli))   //24 slice类型占用24个字节
+    fmt.Println(unsafe.Sizeof(st.s))     //16 string类型16个字节
+    fmt.Println(unsafe.Sizeof(st.arrSt)) //100 [100]int8 数组类型为100*int8 为100个字节
+}
+```
+
+一个结构体类型占用的内存为组成的各个字段的占用的内存之和。
+
+
+
+#### Offsetof 指针的位移
+
+Offsetof返回变量指定属性的偏移量，所以如果变量是一个struct类型，不能直接将这个struct类型的变量当作参数，只能将这个struct类型变量的属性当作参数。
+
+```reasonml
+func TestOffsetof(t *testing.T) {
+    var abc struct {
+        a bool
+        b int32
+        c []int
+    }
+    fmt.Println("SIZE")
+    fmt.Println(unsafe.Sizeof(abc.a)) //1
+    fmt.Println(unsafe.Sizeof(abc.b)) //4
+    fmt.Println(unsafe.Sizeof(abc.c)) //24
+    fmt.Println(unsafe.Sizeof(abc))   //32
+    fmt.Println("OFFSET")
+    fmt.Println(unsafe.Offsetof(abc.a)) //0
+    fmt.Println(unsafe.Offsetof(abc.b)) //4
+    fmt.Println(unsafe.Offsetof(abc.c)) //8
+}
+```
+
+
+
+### go的指针运算
+
+go指针运算的语法：
+
+```ini
+pNew = unsafe.Pointer(uintptr(p) + offset)
+```
+
+p和pNew都是unsafe.Pointer类型
+这里的p转成了uintptr然后和offset相加，是因为，以下两个用到的函数计算offset，返回值都是uintptr
+
+```go
+func Offsetof(x ArbitraryType) uintptr
+func Sizeof(x ArbitraryType) uintptr
+```
+
+最常见的用法是访问结构体中的字段或则数组的元素。
+
