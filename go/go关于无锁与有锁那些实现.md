@@ -14,7 +14,27 @@
 
 接下来我们按照这个顺序由浅入深解开高性能的编程，数据竞态就涉及到并发安全。
 
-在go lang 底层有比较多的并发类，但他们的最基础的就是
+在go lang 底层有比较多的并发类，但他们的最基础的就是`atomic`的cas机制、上一篇说的[golang 用unsafe 无所畏惧](https://mp.weixin.qq.com/s/wUuPr3gcj8-AmFGfnk77Mg)。
+
+
+
+### 常见面试点
+
+本次还是跟之前一样，答案都可以在本文中找到，或者可以vx后台咨询。
+
+Q0：你认为高性能的需要解决问题的本质是什么？
+
+
+
+Q1：golang 对变量有可见性这么一说法吗？那么底层用的是什么？
+
+
+
+Q2：`atomic`的cas 机制能保证 ABA问题吗？如果有则需要怎么实现？
+
+
+
+Q3：RWMutex 支持可重入（即连续获取两次锁）吗？这是为什么？
 
 
 
@@ -39,7 +59,7 @@ STORE：将结果存储回原内存地址。
 
 
 
-#### 并发与非并发得到了不同的值
+并发与非并发得到了不同的值
 
 ```
 func TestI100(t *testing.T) {
@@ -234,7 +254,7 @@ func (v *Value) Store(val any) {
 
 
 
-##### Store流程：
+##### Store流程
 
 1. 判断要Store的值是否为空，如果为空直接panic
 
@@ -319,7 +339,76 @@ Load返回最近一次存的值，如果没有Store过或者typ为`firstStoreInP
 
 
 
-#### RWMutex结构体说明
+示例：
+
+```
+package main
+
+import (
+    "testing"
+    "fmt"
+    "sync"
+    "time"
+)
+
+var rwlock = &sync.RWMutex{}
+var wg = &sync.WaitGroup{}
+
+func TestRWMutex(t *testing.T) {
+    //读
+    wg.Add(1)
+    go rlockwork()
+
+    time.Sleep(2 * time.Second)
+    //读
+    wg.Add(1)
+    go rlock()
+    //写
+    wg.Add(1)
+    go wlock()
+
+    wg.Wait()
+}
+func wlock() {
+    rwlock.Lock()
+    fmt.Println("加写锁")
+    fmt.Println("写任务执行")
+    defer func() {
+        rwlock.Unlock()
+        fmt.Println("最后写解锁完毕")
+        wg.Done()
+    }()
+    fmt.Println("准备解开写锁")
+}
+func rlock() {
+    rwlock.RLock()
+    fmt.Println("加读锁")
+    fmt.Println("读任务执行")
+    defer func() {
+        rwlock.RUnlock()
+        fmt.Println("最后读解锁完毕")
+        wg.Done()
+    }()
+    fmt.Println("准备解开读锁")
+}
+func rlockwork() {
+    rwlock.RLock()
+    fmt.Println("加读锁====首先获取读锁")
+    fmt.Println("读任务执行")
+    time.Sleep(4 * time.Second)
+    defer func() {
+        rwlock.RUnlock()
+        fmt.Println("最后读解锁完毕")
+        wg.Done()
+    }()
+    fmt.Println("准备解开读锁")
+}
+
+```
+
+
+
+#### RWMutex结构体
 
 ```go
 // 读写互斥锁结构体
@@ -333,11 +422,17 @@ type RWMutex struct {
 const rwmutexMaxReaders = 1 << 30 //支持最多2^30个读
 ```
 
+
+
 > w：Mutex互斥锁
+>
 > writeSem：写锁信号量，用来唤醒或睡眠goroutine。
+>
 > readerSem：读锁信号量，用来唤醒或睡眠goroutine。
+>
 > readerCount：类型是int32，它表示当前启用的读者数量，包括了所有正在临界区里面的读者或者被写锁阻塞的等待进入临界区读者的数量。相当于是当前调用了 RLock 函数并且还没调用 RUnLock 函数的读者的数量。
 > readerWait：字段是int32，它用来记录在获取写锁之前，需要等待多少读锁释放的数量。
+>
 > rwmutexMaxReaders：表示最多支持的读者数量。​
 
 
@@ -371,9 +466,9 @@ func (rw *RWMutex) RLock() {
 }
 ```
 
-![img](https://pic3.zhimg.com/v2-f994cd01297faea8d34d415876dd1b2e_1440w.jpg)
+![golang-rwmutext-rlock](../image/golang-rwmutext-rlock.png)
 
-读加锁流程图
+
 
 
 
@@ -421,9 +516,9 @@ func (rw *RWMutex) rUnlockSlow(r int32) {
 }
 ```
 
-![img](https://pica.zhimg.com/v2-4eec56ff85135165abfbf3caa2a7e4f0_1440w.jpg)
+![golang-rwmutex-Runlock](../image/golang-rwmutex-Runlock.png)
 
-读解锁的流程图
+
 
 
 
@@ -459,9 +554,9 @@ func (rw *RWMutex) Lock() {
 }
 ```
 
-![img](https://picx.zhimg.com/v2-c53afd4e4ef275c61ae3e4c39f4373a9_1440w.jpg)
+![golang-rwmutex-lock](../image/golang-rwmutex-lock.png)
 
-写加锁流程图
+
 
 
 
@@ -494,7 +589,7 @@ func (rw *RWMutex) Unlock() {
 }
 ```
 
-![img](https://pic4.zhimg.com/v2-597ef3bd32ebfffd951c378520e8edaf_1440w.jpg)
+![golang-rwmutex-unlock](../image/golang-rwmutex-unlock.png)
 
 
 
@@ -550,7 +645,7 @@ const (
 
 > 定义为int32 类型，允许为其调用原子方法来实现原子化的设定锁的状态 。一共32位，右起第一位表示锁定位，右起第二位表示唤醒位，右起第三位表示饥饿位。其余29位标识等待唤醒的goroutine的数量，下图为state结构图。
 
-![img](https://picx.zhimg.com/v2-301027da84c3f21589c8d5f183bd1f21_1440w.jpg)
+![state](../image/golang-mutex-state-struct.png)
 
 
 
@@ -766,7 +861,9 @@ func (m *Mutex) lockSlow() {
 }
 ```
 
-![img](https://pic1.zhimg.com/v2-5d859389391fdb85d7e36776ec237902_1440w.jpg)
+
+
+![golang-mutex-readlock](../image/golang-mutex-readlock.png)
 
 
 
@@ -821,4 +918,4 @@ func (m *Mutex) unlockSlow(new int32) {
 }
 ```
 
-![img](https://pic4.zhimg.com/v2-5133b5a4c7a978e63508ec81c65e5371_1440w.jpg)
+![golang-mutex-unlock](../image/golang-mutex-unlock.png)
