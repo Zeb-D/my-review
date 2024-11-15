@@ -10,6 +10,16 @@
 
 #### sync.Pool 是什么
 
+> 官方解释是这样的：
+>
+> Pool是一组可以单独保存和检索的临时对象。目的是缓存已分配但未使用的对象供以后重用，从而减轻了垃圾回收器的压力，也就是说，它使构建高效，线程安全的空闲列表变得容易，但它并不适合所有空闲列表。
+>
+> 池的适当用法是管理一组临时项目，它们在程序包的并发独立客户端之间静默共享并有可能被重用。池提供了一种摊销许多客户端上的分配开销的方法。
+>
+> 很好地使用Pool的一个示例是fmt软件包，该软件包维护着动态大小的临时输出缓冲区存储。之前也有一篇文章也介绍这篇文章：[深入理解最常见的fmt方法实现](https://mp.weixin.qq.com/s/eZG5zxBBe4ZLbhw0x5UyAQ)。
+
+
+
 sync.Pool是 Go 语言标准库中提供的一个用于对象复用的工具，它具有以下特点：
 
 1. **对象缓存**：使用 Get、Put 方法可以获取和归还sync.Pool中的数据，从而减轻内存分配与垃圾回收的压力；
@@ -43,57 +53,12 @@ func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 ```
 
-- 又如在一些数据处理程序中，可能需要频繁地创建和销毁一些临时的切片来存储中间结果。使用`sync.Pool`可以提高程序的性能，例如 fmt 包里面的 pp 对象。
-
+- 又如在一些数据处理程序中，可能需要频繁地创建和销毁一些临时的切片来存储中间结果。使用`sync.Pool`可以提高程序的性能，例如 [fmt 包里面的 pp 对象](https://mp.weixin.qq.com/s/eZG5zxBBe4ZLbhw0x5UyAQ)。
 - - 首先调用 newPrinter 实例化 pp 对象，newPrinter 底层就是从 `sync.Pool` 中获取获取缓存对象。
   - 然后打印完毕后再调用 free 将 pp 对象归还到 `sync.Pool` 中。
+- 减少内存分配压力的场景
+  - 在一些对内存分配比较敏感的场景中，如嵌入式系统或者资源受限的环境中，使用`sync.Pool`可以有效地减少内存分配的次数，从而降低内存占用。
 
-```
-func Println(a ...any) (n int, err error) {
-    return Fprintln(os.Stdout, a...)
-}
-
-func Fprintln(w io.Writer, a ...any) (n int, err error) {
-    // 从 Pool 中获取 pp 对象,并初始化
-    p := newPrinter()
-    p.doPrintln(a)
-    n, err = w.Write(p.buf)
-    
-    // 清理 pp 对象状态，并向 Pool 归还 pp 对象
-    p.free()
-    return
-}
-
-
-func newPrinter() *pp {
-    p := ppFree.Get().(*pp)
-    p.panicking = false
-    p.erroring = false
-    p.wrapErrs = false
-    p.fmt.init(&p.buf)
-    return p
-}
-
-func (p *pp) free() {
-    if cap(p.buf) > 64*1024 {
-       p.buf = nil
-    } else {
-       p.buf = p.buf[:0]
-    }
-    if cap(p.wrappedErrs) > 8 {
-       p.wrappedErrs = nil
-    }
-
-    p.arg = nil
-    p.value = reflect.Value{}
-    p.wrappedErrs = p.wrappedErrs[:0]
-    ppFree.Put(p)
-}
-```
-
-##### 减少内存分配压力的场景
-
-- 在一些对内存分配比较敏感的场景中，如嵌入式系统或者资源受限的环境中，使用`sync.Pool`可以有效地减少内存分配的次数，从而降低内存占用。
 
 
 
@@ -105,61 +70,38 @@ func (p *pp) free() {
 package main
 
 import (
-    "fmt"
-    "sync"
+	"bytes"
+	"io"
+	"os"
+	"sync"
+	"time"
 )
 
-type Person struct {
-    Name string
-    Age  int
+var bufPool = sync.Pool{
+	New: func() interface{} {
+                // 初始化，通常返回指针类型
+		return new(bytes.Buffer)
+	},
 }
 
-type personPool struct {
-    pool sync.Pool
+func timeNow() time.Time {
+	return time.Unix(1136214245, 0)
 }
 
-func (pp *personPool) Get(name string, age int) (p *Person, err error) {
-    // 从池中获取一个对象
-    p, ok := pp.pool.Get().(*Person)
-    if !ok {
-       return nil, err
-    }
-
-    // 初始化
-    p.Name = name
-    p.Age = age
-
-    return p, nil
-}
-
-func (pp *personPool) Put(p *Person) {
-    // 清理状态
-    p.Name = ""
-    p.Age = 0
-
-    // 归还
-    pp.pool.Put(p)
-}
-
-var PersonPool = &personPool{
-    pool: sync.Pool{
-       New: func() interface{} {
-          return new(Person)
-       },
-    },
+func Log(w io.Writer, key, val string) {
+	b := bufPool.Get().(*bytes.Buffer)
+	b.Reset()
+	b.WriteString(timeNow().UTC().Format(time.RFC3339))
+	b.WriteByte(' ')
+	b.WriteString(key)
+	b.WriteByte('=')
+	b.WriteString(val)
+	w.Write(b.Bytes())
+	bufPool.Put(b)
 }
 
 func main() {
-    // 从池中获取一个对象
-    p1, err := PersonPool.Get("tom", 23)
-    if err != nil {
-       fmt.Println(err)
-    }
-
-    fmt.Println("Got person from pool:", p1.Name)
-
-    // 使用完毕后放回池中
-    PersonPool.Put(p1)
+	Log(os.Stdout, "path", "/search?q=flowers")
 }
 ```
 
@@ -434,6 +376,10 @@ poolChainElt 是链表的一个节点，prev 和 next 是指向前后节点的�
 #### ![图片](https://mmbiz.qpic.cn/mmbiz_png/2kOTFMdShwucRc3OsUE1P0LQtlFQE7KQN4iaTia3WLQ4htcjbPyrB3CyOetk7V9PicpnmHBSE3YQbtfK9GUc0xdGg/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
 
 sync.Pool 整体数据结构
+
+
+
+
 
 
 
