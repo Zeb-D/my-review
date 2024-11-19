@@ -4,11 +4,41 @@
 
 ------
 
+### 序
+
+系统优化三板斧：堆机器、加缓存、升配置，其中缓存抽象成池化技术的一种，近一点的说本地缓存，内核一点的话就有比较多种（比如TCP的receive\accept 队列），分布式一点的话说分布式缓存。
+
+那么golang也提供了底层池化技术sync.Pool，这是一门利器，在一些性能优化（特别是一些尖刺问题）它可以作为第一个参考推荐物。
 
 
-### 简介
 
-#### sync.Pool 是什么
+### 常见面试题
+
+回答隐藏在这篇文章中，耐心方能寻得真爱～
+
+Q0：基础题：你平时有直接/间接用过sync.Pool吗？用它的理由是什么？
+
+
+
+Q1：中阶题：sync.Pool 是如何减少重复分配的？又是如何避免GC的？
+
+
+
+Q2：中阶题：sync.Pool 它的并发度是多少？你的参考是什么？
+
+
+
+Q3：高阶题：你认为sync.Pool 有哪些缺点，你有重构思路吗？
+
+
+
+注：欢迎留言/后台交流，知无不言～
+
+
+
+
+
+### sync.Pool 是什么
 
 > 官方解释是这样的：
 >
@@ -22,18 +52,19 @@
 
 sync.Pool是 Go 语言标准库中提供的一个用于对象复用的工具，它具有以下特点：
 
-1. **对象缓存**：使用 Get、Put 方法可以获取和归还sync.Pool中的数据，从而减轻内存分配与垃圾回收的压力；
-2. **自动回收**：sync.Pool中的对象可能会被自动回收。这意味着即使你将对象放入池中，也不能保证该对象会一直存在于池中。当内存紧张或者垃圾回收器运行时，sync.Pool中的对象可能会被回收，所以 sync.Pool 适用于存储那些临时使用、生命周期较短的对象；
-3. **并发安全**：sync.Pool对于并发访问是安全的。多个 goroutine 可以同时从池中获取和放回对象，而不需要额外的同步机制；
-4. **状态不可靠**：由于sync.Pool中的对象可能会被自动回收，所以不能依赖池中对象的状态。在从池中获取对象后，应该根据具体的使用场景对对象进行初始化，以确保对象处于正确的状态。
+> **对象缓存**：使用 Get、Put 方法可以获取和归还sync.Pool中的数据，从而减轻内存分配与垃圾回收的压力；
+>
+> **自动回收**：sync.Pool中的对象可能会被自动回收。这意味着即使你将对象放入池中，也不能保证该对象会一直存在于池中。当内存紧张或者垃圾回收器运行时，sync.Pool中的对象可能会被回收，所以 sync.Pool 适用于存储那些临时使用、生命周期较短的对象；
+>
+> **并发安全**：sync.Pool对于并发访问是安全的。多个 goroutine 可以同时从池中获取和放回对象，而不需要额外的同步机制；
+>
+> **状态不可靠**：由于sync.Pool中的对象可能会被自动回收，所以不能依赖池中对象的状态。在从池中获取对象后，应该根据具体的使用场景对对象进行初始化，以确保对象处于正确的状态。
 
 
 
 #### sync.Pool 适用场景
 
 ##### 频繁创建和销毁对象的场景
-
-- 比如在处理大量并发请求的服务器中，可能需要频繁地创建和销毁一些临时的结构体来存储请求数据。使用`sync.Pool`可以复用这些结构体，减少内存分配和垃圾回收的开销，例如 gin里面的 Context 对象，在 `gin` 的 `Engine` 结构体中的 `ServeHTTP` 方法中，可以看到 `Context` 对象是从 `Pool` 中获取的。然后在处理完请求之后，将 `Context` 对象放回 `Pool` 中。
 
 ```
 func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -53,20 +84,20 @@ func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 ```
 
+- 比如在处理大量并发请求的服务器中，可能需要频繁地创建和销毁一些临时的结构体来存储请求数据。使用`sync.Pool`可以复用这些结构体，减少内存分配和垃圾回收的开销。
+
 - 又如在一些数据处理程序中，可能需要频繁地创建和销毁一些临时的切片来存储中间结果。使用`sync.Pool`可以提高程序的性能，例如 [fmt 包里面的 pp 对象](https://mp.weixin.qq.com/s/eZG5zxBBe4ZLbhw0x5UyAQ)。
-- - 首先调用 newPrinter 实例化 pp 对象，newPrinter 底层就是从 `sync.Pool` 中获取获取缓存对象。
-  - 然后打印完毕后再调用 free 将 pp 对象归还到 `sync.Pool` 中。
 - 减少内存分配压力的场景
   - 在一些对内存分配比较敏感的场景中，如嵌入式系统或者资源受限的环境中，使用`sync.Pool`可以有效地减少内存分配的次数，从而降低内存占用。
 
 
 
 
-#### **sync.Pool 用法**
+#### sync.Pool 用法
 
-##### **基础用法**
+##### 基础用法
 
-```
+```go
 package main
 
 import (
@@ -79,7 +110,7 @@ import (
 
 var bufPool = sync.Pool{
 	New: func() interface{} {
-                // 初始化，通常返回指针类型
+		// 初始化，通常返回指针类型
 		return new(bytes.Buffer)
 	},
 }
@@ -103,70 +134,62 @@ func Log(w io.Writer, key, val string) {
 func main() {
 	Log(os.Stdout, "path", "/search?q=flowers")
 }
-```
-
-1. 通常会把 sync.Pool 对象声明成全局变量，因为sync.Pool 对象作为缓存池通常不需要频繁创建和回收；
-2. 在需要临时对象时使用 Get 方法获取，通常 Get 之后需要进行断言和一些初始化操作，Get 之后的数据状态是不确定的。
-3. 使用完临时对象后需要使用 Put 方法将临时对象重新放入缓存池中，比较好的做法是在 Put 前要对临时对象做一些清理工作，以免影响下一次复用。
-
-
-
-##### **性能对比**
 
 ```
-package main
 
-import (
-    "sync"
-    "testing"
-)
+> 通常会把 sync.Pool 对象声明成全局变量，因为sync.Pool 对象作为缓存池通常不需要频繁创建和回收；
+>
+> 在需要临时对象时使用 Get 方法获取，通常 Get 之后需要进行断言和一些初始化操作，Get 之后的数据状态是不确定的。
+>
+> 使用完临时对象后需要使用 Put 方法将临时对象重新放入缓存池中，比较好的做法是在 Put 前要对临时对象做一些清理工作，以免影响下一次复用。
 
-type MyObject struct {
-    Data []byte
-}
 
-var objectPool = sync.Pool{
-    New: func() interface{} {
-       return &MyObject{
-          Data: make([]byte, 0, 1024),
-       }
-    },
+
+##### 性能对比
+
+```go
+
+var bufPool = sync.Pool{
+	New: func() interface{} {
+		// 初始化，通常返回指针类型
+		return new(bytes.Buffer)
+	},
 }
 
 func withoutPool() {
-    obj := &MyObject{
-       Data: make([]byte, 0, 1024),
-    }
-    // 模拟对对象的使用
-    _ = obj.Data
+	buf := bytes.Buffer{}
+	// 模拟对对象的使用
+	buf.Write([]byte(`aaaadsdsdasdasdasdasd`))
 }
 
 func withPool() {
-    obj := objectPool.Get().(*MyObject)
-    // 模拟对对象的使用
-    _ = obj.Data
-    objectPool.Put(obj)
+	buf := bufPool.Get().(*bytes.Buffer)
+	// 模拟对对象的使用
+	buf.Write([]byte(`aaaadsdsdasdasdasdasd`))
+	bufPool.Put(buf)
 }
 
 func BenchmarkWithoutPool(b *testing.B) {
-    b.ReportAllocs()
-    for i := 0; i < b.N; i++ {
-       withoutPool()
-    }
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		withoutPool()
+	}
 }
 
 func BenchmarkWithPool(b *testing.B) {
-    b.ReportAllocs()
-    for i := 0; i < b.N; i++ {
-       withPool()
-    }
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		withPool()
+	}
 }
 
->>> go test -bench=.
-BenchmarkWithoutPool-12         74913964                14.67 ns/op            0 B/op          0 allocs/op
-BenchmarkWithPool-12            135602400                8.755 ns/op           0 B/op          0 allocs/op
-PASS
-ok      pool    3.962s
+```
+
+```go
+cpu: Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz
+BenchmarkWithoutPool-12         30305481                34.72 ns/op           64 B/op          1 allocs/op
+BenchmarkWithPool-12            67764316                18.29 ns/op            0 B/op          0 allocs/op
+
 ```
 
 通过基准测试可以看出，使用 sync.Pool 可以提高大概 40% 的性能，在实际开发中我们也可以使用sync.Pool提高我们服务的性能。
@@ -175,113 +198,29 @@ ok      pool    3.962s
 
 
 
-### **注意事项**
+### 注意事项
 
-在使用sync.Pool时，有以下几点需要注意：
+1、由于sync.Pool中的对象可能会被随时回收和复用，不能依赖池中对象的初始状态。当从池中获取一个对象时，它可能处于任何状态，不能假定其字段已经被正确初始化。
 
-#### 对象状态不可预期
+2、例如，如果你从池中获取一个结构体对象用于存储数据，在使用前**必须明确地对其进行初始化操作**，以确保数据的准确性和一致性。否则，可能会出现不可预测的错误结果。
 
-1. 由于sync.Pool中的对象可能会被随时回收和复用，不能依赖池中对象的初始状态。当从池中获取一个对象时，它可能处于任何状态，不能假定其字段已经被正确初始化。
-2. 例如，如果你从池中获取一个结构体对象用于存储数据，在使用前必须明确地对其进行初始化操作，以确保数据的准确性和一致性。否则，可能会出现不可预测的错误结果。
+由于 GC 的执行时机和 Put 的内容我们很难掌控，所以通过 Get 得到数据的状态是不确定的，需要自己对对象重置为0。
 
-```
-package main
 
-import (
-    "fmt"
-    "runtime"
-    "sync"
-)
-
-type Person1 struct {
-    Name string
-}
-
-var personPool1 = sync.Pool{
-    New: func() interface{} {
-       return &Person1{
-          Name: "default_name",
-       }
-    },
-}
-
-func main() {
-    // 从池中获取一个对象
-    p1 := personPool1.Get().(*Person1)
-    p1.Name = "Alice"
-    fmt.Println("Got person from pool:", p1.Name)
-
-    // 使用完毕后放回池中
-    personPool1.Put(p1)
-
-    // 再次从池中获取，可能会获取到之前放回去的对象
-    p2 := personPool1.Get().(*Person1)
-    fmt.Println("没有 GC 的对象:", p2.Name)
-
-    // 执行 GC
-    runtime.GC()
-
-    // GC 后，可能会获取到一个全新的对象
-    p3 := personPool1.Get().(*Person1)
-    fmt.Println("GC 后的对象:", p3.Name)
-}
-
->>> go run main2.go
-Got person from pool: Alice
-没有 GC 的对象: Alice
-GC 后的对象: default_name
-```
-
-由于 GC 的执行时机和 Put 的内容我们很难掌控，所以通过 Get 得到数据的状态是不确定的。
-
-#### 并发安全但仍需谨慎
-
-1. sync.Pool的并发安全只能保证多个 goroutine 可以同时从池中获取和放回对象，无需额外的同步机制。然而，在实际使用中，如果对从池中获取的对象进行复杂的操作，且这些操作涉及到多个 goroutine 之间的交互，仍需要谨慎考虑是否需要额外的同步措施。
-2. 比如，多个 goroutine 同时获取到同一个对象并尝试修改其状态，如果不加以适当的同步控制，可能会导致数据竞争和不一致的问题。
-
-```
-func main() {
-    // 从池中获取一个对象，并发安全
-    p1, err := PersonPool.Get("tom", 23)
-    if err != nil {
-       fmt.Println(err)
-    }
-
-    wg := sync.WaitGroup{}
-    mtx := sync.Mutex{}
-    for i := 0; i < 100; i++ {
-       wg.Add(1)
-       go func() {
-          defer wg.Done()
-          // 非并发安全，需要其他同步机制
-          mtx.Lock()
-          p1.Score += 1
-          mtx.Unlock()
-       }()
-    }
-    wg.Wait()
-
-    fmt.Println("Got person from pool:", p1.Name, p1.Score)
-
-    // 使用完毕后放回池中，并发安全
-    PersonPool.Put(p1)
-}
-```
 
 #### 适用场景特定
 
-1. sync.Pool适用于存储那些临时使用、生命周期较短的对象。对于需要长期保存状态或者具有复杂生命周期管理需求的对象，不适合使用sync.Pool。
-2. 例如，对于需要在多个不同的操作阶段都保持一致状态的业务对象，使用sync.Pool可能会导致状态丢失和不可预测的行为。而对于一些纯粹的临时计算结果的存储对象，sync.Pool则可以有效地提高性能和减少内存分配压力。
+1、sync.Pool适用于存储那些临时使用、生命周期较短的对象。对于需要长期保存状态或者具有复杂生命周期管理需求的对象，不适合使用sync.Pool。
+
+2、例如，对于需要在多个不同的操作阶段都保持一致状态的业务对象，使用sync.Pool可能会导致状态丢失和不可预测的行为。而对于一些纯粹的临时计算结果的存储对象，sync.Pool则可以有效地提高性能和减少内存分配压力。
 
 
 
-### **sync.Pool 的工作原理**
+### sync.Pool 的工作原理
 
-#### **数据结构**
+#### Pool 结构体
 
-##### **Pool 结构体**
-
-```
+```go
 type Pool struct {
     // noCopy 用于防止 Pool 被复制（可以使用 go vet 检测）
     noCopy noCopy
@@ -305,15 +244,11 @@ type Pool struct {
 
 字段说明：
 
+![go-sync.pool-pool-struct](../image/go-sync.pool-pool-struct.png)
+
 - local：底层类型是 poolLocal 类型的数组，长度是 runtime.GOMAXPROCS(0)，也就是当前 P 的数量。
 
-  之所以local 是长度为 runtime.GOMAXPROCS(0) 的数组是为了提高性能，上面提到 sync.Pool 是可以被多个 goroutine 并发访问，如果使用锁防止竞态问题，那么sync.Pool 的访问就会变成串行的，会带来较大的性能问题。
-
-![图片](https://mmbiz.qpic.cn/mmbiz_png/2kOTFMdShwucRc3OsUE1P0LQtlFQE7KQPK4VcyCNn4bOBicibF3sh3k9waE5PmlrwKhfAnbQnl2ibyoOZqlHBq36g/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
-
-为了提高性能 sync.Pool 为每个 P 都分配了一个 poolLocal ，这样就避免了竞态问题：
-
-![图片](https://mmbiz.qpic.cn/mmbiz_png/2kOTFMdShwucRc3OsUE1P0LQtlFQE7KQV2CEfM9f7LfhPgbOgJYGw4nEufdbQ0n0ahlq0Fxkoic0iawPxgh3nkXg/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
+  之所以local 是长度为 runtime.GOMAXPROCS(0) 的数组是为了提高性能，上面提到 sync.Pool 是可以被多个 goroutine 并发访问，如果使用锁防止竞态问题，那么sync.Pool 的访问就会变成串行的，会带来较大的性能问题。为了提高性能 sync.Pool 为每个 P 都分配了一个 poolLocal ，这样就避免了竞态问题。
 
 - localSize：local 的长度。
 
@@ -325,9 +260,11 @@ type Pool struct {
 
 - New：新建对象的方法。
 
-##### **poolLocal 结构体**
 
-```
+
+##### poolLocal 结构体
+
+```go
 type poolLocal struct {
     poolLocalInternal
 
@@ -337,11 +274,14 @@ type poolLocal struct {
 }
 ```
 
-poolLocal 是为每个 P 分配的缓存池，poolLocal 有两个字段，其中 pad 是一个填充字段，是防止出现伪共享的问题，poolLocalInternal 字段是真正的存储数据的。
+> `poolLocalInternal`：本地pool池。
+> `pad`：防止在缓存行上分配多个poolLocalInternal从而造成false sharing（[伪共享]）
 
-##### **poolLocalInternal 结构体**
 
-```
+
+##### poolLocalInternal 结构体
+
+```go
 type poolLocalInternal struct {
     private any       // Can be used only by the respective P.
     shared  poolChain // Local P can pushHead/popHead; any P can popTail.
@@ -353,11 +293,17 @@ type poolChain struct {
 }
 ```
 
-poolLocalInternal 是真正存储数据的，private 字段是当前 P 私有的，保存的数据只有当前 P 才能获取，shared 字段是一个双向链表，长度会动态调整，当前 P 和 其他 P 都能从 shared 里面获取数据，区别是当前 P 是使用 popHead()、pushHead() 获取或填充数据， 其他 P 只能使用 popTail() 获取数据。
+> `private`：本地私有池，只能被对应的P(goroutine执行占用的处理器)使用。不会有并发问题，不用加锁。
+>
+> share：本地共享池，本地能通过pushHead和popHead，其他任何P通过popTail使用。因为可能有多个goroutine同时操作，所以需要加锁。类型为poolChain,是被实现为poolDequeue的[双向队列]。具体见下图。
 
-##### **poolChainElt 结构体**
 
-```
+
+
+
+##### poolChainElt 结构体
+
+```go
 type poolChainElt struct {
     poolDequeue
     next, prev *poolChainElt
@@ -371,60 +317,103 @@ type poolDequeue struct {
 
 poolChainElt 是链表的一个节点，prev 和 next 是指向前后节点的指针，poolDequeue 是一个环形队列，vals 是环形队列保存数据的地方，headTail 的高32位保存 head 节点的索引，低 32 位保存 tail 节点的索引。
 
-##### **整体数据结构**
-
-#### ![图片](https://mmbiz.qpic.cn/mmbiz_png/2kOTFMdShwucRc3OsUE1P0LQtlFQE7KQN4iaTia3WLQ4htcjbPyrB3CyOetk7V9PicpnmHBSE3YQbtfK9GUc0xdGg/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
-
-sync.Pool 整体数据结构
 
 
+poolDequeue
+
+
+headTail：是环状队列的首位位置的指针，可以通过位运算解析出首尾的位置。生产者可以从 head 插入、head 删除，而消费者仅可从 tail 删除
+
+> vals ：是存储 interface{} 值,这个的大小必须是2的幂。
 
 
 
+eface
+
+> typ,val：存储eface值，是一个无特殊意义的指针，可以包含任意类型的地址。
 
 
-#### 方法及流程
 
-##### Put 方法
+##### 整体数据结构
 
-```
-func (p *Pool) Put(x any) {
-    // 如果 Put 的值是 nil，则直接返回
-    if x == nil {
-       return
-    }
-    
-    // ...
-    
-    // 将当前的 goroutine 和 P 绑定，禁止被抢占，返回当前 P 的本地缓存（poolLocal）和 P 的 ID
-    l, _ := p.pin()
-    
-    
-    if l.private == nil {
-       // 如果本地 private 为空，则将 x 放入本地 private
-       l.private = x
-    } else {
-       // 如果本地 private 不为空，则将 x 放入本地 shared 的头部
-       l.shared.pushHead(x)
-    }
-    
-    // 将当前的 goroutine 和 P 解绑，允许被抢占
-    runtime_procUnpin()
-    // ...
+![go-sync.pool-struct](../image/go-sync.pool-struct.png)
+
+
+
+#### runtime 函数处理
+
+##### runtime_procUnpin
+
+> 在src/runtime/proc.go中被实现sync_runtime_procUnpin；表示获取当前goroutine，并解除禁止抢占。
+
+
+
+##### runtime_procPin
+
+> 在src/runtime/proc.go中被实现sync_runtime_procPin；表示获取当前goroutine绑定的M，获取M绑定的P的id，并且禁止抢占。
+
+
+
+##### runtime_registerPoolCleanup
+
+> 在src/runtime/proc.go中被实现sync_runtime_registerPoolCleanup；表示在GC之前调用该函数。
+
+
+
+#### Put 方法
+
+```go
+func (p *Pool) Put(x interface{}) {
+        // 对象x 不能为nil
+	if x == nil {
+		return
+	}
+        // 竞态检测
+	if race.Enabled {
+		if fastrand()%4 == 0 {
+			return
+		}
+		race.ReleaseMerge(poolRaceAddr(x))
+		race.Disable()
+	}
+        // 获取当前P对应的poolLocal对象池
+	l, _ := p.pin() 
+        // 本地私有池为空
+	if l.private == nil {
+                // 赋值
+		l.private = x
+		x = nil
+	}
+        // x不为空
+	if x != nil {
+                // 添加至本地共享池
+		l.shared.pushHead(x)
+	}
+        // 调用方必须在完成取值后调用 runtime_procUnpin() 来取消禁止抢占
+	runtime_procUnpin()
+	if race.Enabled {
+		race.Enable()
+	}
 }
 ```
 
 Pool Put 的流程：
 
-1. 如果 Put 的值是 nil，则直接返回。
-2. 将当前的 goroutine 和 P 绑定，禁止被抢占，返回当前 P 的本地缓存（poolLocal）和 P 的 ID。
-3. 如果本地 private 为空，则将 x 放入本地 private。
-4. 如果本地 private 不为空，则将 x 放入本地 shared 的头部。
-5. 将当前的 goroutine 和 P 解绑，允许被抢占。
+> 1、如果 Put 的值是 nil，则直接返回。
+>
+> 2、将当前的 goroutine 和 P 绑定，禁止被抢占，返回当前 P 的本地缓存（poolLocal）和 P 的 ID。
+>
+> 3、如果本地 private 为空，则将 x 放入本地 private。
+>
+> 4、如果本地 private 不为空，则将 x 放入本地 shared 的头部。
+>
+> 5、将当前的 goroutine 和 P 解绑，允许被抢占。
 
-###### **pin()**
 
-```
+
+##### pin()
+
+```go
 // 将当前的 goroutine 和 P 绑定，禁止被抢。
 func (p *Pool) pin() (*poolLocal, int) {
     // procPin 函数的目的是为了当前 G 绑定到 P 上。
@@ -443,22 +432,26 @@ func (p *Pool) pin() (*poolLocal, int) {
 }
 ```
 
-1. 调用 runtime_procPin 将当前协程与 P 绑定，禁用抢占，并返回当前 P 的 id，完成后需要调用 runtime_procUnpin() 进行解绑，禁止抢占的目的是防止发生 GC 导致 p.local 的长度和 p.localSize 不一致；
-2. pid < s 时说明当前 P 已经初始化过了，调用 indexLocal 返回当前 P 的 poolLocal。
-3. 如果当前 P 没有初始化过，那么就调用 pinSlow()
+> 1、调用 runtime_procPin 将当前协程与 P 绑定，禁用抢占，并返回当前 P 的 id，完成后需要调用 runtime_procUnpin() 进行解绑，禁止抢占的目的是防止发生 GC 导致 p.local 的长度和 p.localSize 不一致；
+>
+> 2、pid < s 时说明当前 P 已经初始化过了，调用 indexLocal 返回当前 P 的 poolLocal。
+>
+> 3、如果当前 P 没有初始化过，那么就调用 pinSlow()
 
-indexLocal 逻辑比较简单，通过偏移量来获取对应 pid 的 poolLocal，之前的文章《[深入理解 go unsafe](https://mp.weixin.qq.com/s?__biz=Mzk0ODMwNTg0MA==&mid=2247484843&idx=1&sn=5141c65c81c90271248c771e788fe6a4&scene=21#wechat_redirect)》介绍过如何通过偏移量来获取数组的元素。
+indexLocal 逻辑比较简单，通过偏移量来获取对应 pid 的 poolLocal，之前的文章《[深入理解 go unsafe](https://mp.weixin.qq.com/s/wUuPr3gcj8-AmFGfnk77Mg)》介绍过如何通过偏移量来获取数组的元素。
 
-```
+```go
 func indexLocal(l unsafe.Pointer, i int) *poolLocal {
     lp := unsafe.Pointer(uintptr(l) + uintptr(i)*unsafe.Sizeof(poolLocal{}))
     return (*poolLocal)(lp)
 }
 ```
 
-###### **pinSlow()**
 
-```
+
+##### pinSlow()
+
+```go
 func (p *Pool) pinSlow() (*poolLocal, int) {
     // 在互斥锁下重试。
     // 在固定时无法锁定互斥锁。
@@ -492,18 +485,23 @@ func (p *Pool) pinSlow() (*poolLocal, int) {
 
 pinSlow 的流程：
 
-1. 解除当前 P 的绑定。
-2. 加全局 Pool 的锁。
-3. 重新绑定当前 P，重新绑定的目的是防止抢占，以免发生GC时localSize 和 local 的长度不一致。
-4. 如果当前 P 的 id 小于 localSize，那么就返回当前 P 的 poolLocal。（典型的 double-checking）
-5. 如果 local 还没初始化，那么将当前 P 的 poolLocal 添加到 allPools 中。
-6. 初始化 local。最后返回当前 P 的 poolLocal。
+> 1、解除当前 P 的绑定。
+>
+> 2、加全局 Pool 的锁。
+>
+> 3、重新绑定当前 P，重新绑定的目的是防止抢占，以免发生GC时localSize 和 local 的长度不一致。
+>
+> 4、如果当前 P 的 id 小于 localSize，那么就返回当前 P 的 poolLocal。（典型的 double-checking）
+>
+> 5、如果 local 还没初始化，那么将当前 P 的 poolLocal 添加到 allPools 中。
+>
+> 6、初始化 local。最后返回当前 P 的 poolLocal。
 
 
 
-###### **shared.pushHead()**
+##### shared.pushHead()
 
-```
+```go
 // 添加一个元素到队列头部
 func (c *poolChain) pushHead(val any) {
     // 链表头
@@ -545,24 +543,19 @@ func (c *poolChain) pushHead(val any) {
 
 1. 如果链表为空时，初始化链表，新建一个 poolChainElt 的链表节点并放入链表中，链表节点内部的 poolQueue 是一个环形队列。
 
-   
-
-![图片](https://mmbiz.qpic.cn/mmbiz_png/2kOTFMdShwucRc3OsUE1P0LQtlFQE7KQdwusfLK3C4iaqN7Qgr6Acw58uJibPq8sQZmlCr3krQ7vqaibwtQ11dfDA/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
-
-初始化链表
-
-1. 然后尝试将 val 添加到链表头部，头部节点的 poolQueue 还没满的时候可以成功 push，pushHead 会返回 true，poolQueue 满的时候 pushHead 返回 false。
-2. 如果头部节点的 poolQueue 已经满了，就会再生成一个链表节点，新生成的链表节点的环形队列长度是前一个节点环形队列长度的两倍。
-
-![图片](https://mmbiz.qpic.cn/mmbiz_png/2kOTFMdShwucRc3OsUE1P0LQtlFQE7KQkcGlAdlKfaGGIEq438OPQpOBicluVt6Owndh27pqNOvUxTz5Yq38DfA/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
-
-新建链表节点
+   ![go-sync.pool-struct](../image/go-sync.pool-struct.png)
 
 
 
-##### Get 方法
+> 1、然后尝试将 val 添加到链表头部，头部节点的 poolQueue 还没满的时候可以成功 push，pushHead 会返回 true，poolQueue 满的时候 pushHead 返回 false。
+>
+> 2、如果头部节点的 poolQueue 已经满了，就会再生成一个链表节点，新生成的链表节点的环形队列长度是前一个节点环形队列长度的两倍。
 
-```
+
+
+#### Get 方法
+
+```go
 // Get 从 Pool 中获取一个对象
 func (p *Pool) Get() any {
     // ...
@@ -593,14 +586,19 @@ func (p *Pool) Get() any {
 
 Pool Get 的流程可以总结如下：
 
-1. 将当前的 goroutine 和 P 绑定，禁止被抢占，返回当前 P 的本地缓存（poolLocal）和 P 的 ID；
-2. 从本地 private 取，如果取不到，就从本地 shared 的头部取，如果取不到，再调用 getSlow 获取；
-3. 将当前的 goroutine 和 P 解绑，允许被抢占；
-4. 如果 p.New 不为 nil，则返回 p.New 的结果。
+> 1、将当前的 goroutine 和 P 绑定，禁止被抢占，返回当前 P 的本地缓存（poolLocal）和 P 的 ID；
+>
+> 2、从本地 private 取，如果取不到，就从本地 shared 的头部取，如果取不到，再调用 getSlow 获取；
+>
+> 3、将当前的 goroutine 和 P 解绑，允许被抢占；
+>
+> 4、如果 p.New 不为 nil，则返回 p.New 的结果。
 
-###### **getSlow**
 
-```
+
+##### getSlow
+
+```go
 // 从其他 P 的 shared 的尾部取。
 func (p *Pool) getSlow(pid int) any {
     // 获取 local 的大小和 local。
@@ -644,18 +642,21 @@ func (p *Pool) getSlow(pid int) any {
 
 getSlow 的主要流程：
 
-1. 从其他 P 对应的 poolLocal 中获取缓存对象；
-2. 如果获取不到再从 victim 中获取缓存对象。
+1、从其他 P 对应的 poolLocal 中获取缓存对象；
 
-#### **Get 整体流程**![图片](https://mmbiz.qpic.cn/mmbiz_png/2kOTFMdShwucRc3OsUE1P0LQtlFQE7KQ6S8NKsNpuFLMCdCGE2CSKNZK9nLyvdNwNspsJUNsAaegic4nT0wB8xA/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
+2、如果获取不到再从 victim 中获取缓存对象。
+
+![go-sync.pool-get-workflow](../image/go-sync.pool-get-workflow.png)
 
 
 
-Get整体流程
 
-###### poolCleanup() 函数
 
-```
+
+
+#### poolCleanup() 函数
+
+```go
 var (
     allPoolsMu Mutex
 
@@ -685,16 +686,9 @@ func poolCleanup() {
 
 poolCleanup 函数会在 GC 开始之前 STW 时被调用，主要功能：
 
-1. 清理所有 pool 的 victim 和 victimSize；
-2. 将所有 pool 的 local 和 localSize 赋值给 victim 和 victimSize；
-3. 清理所有 pool 的 local 和 localSize；
+> 1、清理所有 pool 的 victim 和 victimSize；
+>
+> 2、将所有 pool 的 local 和 localSize 赋值给 victim 和 victimSize；
+>
+> 3、清理所有 pool 的 local 和 localSize；
 
-## **总结**
-
-1. sync.Pool 是 Go 语言中用于对象复用的工具，具有对象缓存、自动回收、并发安全和状态不可靠等特点。
-2. 它适用于频繁创建和销毁对象以及减少内存分配压力的场景，但在使用时需要注意对象状态不可预期、并发安全仍需谨慎以及适用场景特定等问题。
-3. 通过合理使用 sync.Pool，可以提高程序的性能和内存利用率。在实际开发中，需要根据具体的需求和场景来判断是否选择使用 sync.Pool，并遵循其注意事项。
-
-
-
-本文参考：https://mp.weixin.qq.com/s/rsvhSCmLULwfHrMek8VCBg
