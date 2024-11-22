@@ -61,7 +61,7 @@ for i := range a {
 
 
 
-## 官方解释
+### 官方解释
 
 这个问题在官方 Wiki 中是有回答的，我复制出来放在下面：
 
@@ -86,7 +86,7 @@ for i := range a {
 
 
 
-## 内存布局
+### 内存布局
 
 首先来看看 slice 在内存中是如何存储的。在源码中，它是这样定义的：
 
@@ -148,7 +148,7 @@ type eface struct {
 
 
 
-## 程序运行中的内存布局
+### 程序运行中的内存布局
 
 接下来换一个更形象的方式，从程序实际运行过程中，看看内存的分布是怎么样的？
 
@@ -287,7 +287,7 @@ Breakpoint 1 set at 0x105a3fe for main.main() ./slice-layout.go:27
 
 
 
-## 通用方法
+### 通用方法
 
 通过以上分析，我们知道了不能转换的原因，那有没有一个通用方法呢？
 
@@ -321,7 +321,7 @@ func InterfaceSlice(slice interface{}) []interface{} {
 
 
 
-## 参考文章
+### 参考文章
 
 - https://mp.weixin.qq.com/s/jsdGV31yT5AR07BzRovWVw
 - https://stackoverflow.com/questions/12753805/type-converting-slices-of-interfaces
