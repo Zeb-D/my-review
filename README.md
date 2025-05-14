@@ -11,7 +11,7 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 
 个人知乎：https://www.zhihu.com/people/tnbpu4/posts
 
-个人微信，欢迎私聊（加v请备注来源）：
+个人微信，欢迎私聊（加v请备注来源：称呼+来源）：
 
 ![个人微信](./image/a-qrcode_for_gh.jpg)
 
