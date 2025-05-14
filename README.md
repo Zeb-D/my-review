@@ -9,6 +9,8 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 个人微信公众号，更多精彩分享到这里：
 ![个人微信公众号](./image/a-my-vx-qrcode1.png)
 
+个人知乎：https://www.zhihu.com/people/tnbpu4/posts
+
 个人微信，欢迎私聊（加v请备注来源）：
 
 ![个人微信](./image/a-qrcode_for_gh.jpg)
@@ -39,6 +41,7 @@ IT后端职业者成长之路，系统性学习：哪里不会就系统性学哪
 
 ### 详细知识列表
 
+* [AI-人工智能](https://github.com/Zeb-D/my-review/blob/master/ai) 机器学习、深度学习、transformer等知识
 * [数据存储](https://github.com/Zeb-D/my-review/blob/master/db) 不只是数据库，更多的是数据存储
 	* [HBase](https://github.com/Zeb-D/my-review/blob/master/db/hbase)
 		* [HBase之MSLAB](https://github.com/Zeb-D/my-review/blob/master/db/hbase/HBase之MSLAB.md)
