@@ -10,7 +10,7 @@
 ```
 然后brew install kubectl 客户端
 然后进行尝试 kubectl cluster-info
-kubeclt get nodes
+kubectl get nodes
 ```
 
 ```

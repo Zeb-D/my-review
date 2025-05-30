@@ -123,7 +123,7 @@ CREATE DATABASE IF NOT EXISTS test DEFAULT CHARACTER SET utf8mb4
 ### zookeeper
 
 ```
-docker run -p 2181:2181 -v ~/docker/zk/zkdata:/data:rw -v ~/docker/zk/zklogdata:/datalog --name ydZk -d zookeeper:3.4
+docker run -p 2181:2181 -v ~/docker/zk/zkdata:/data:rw -v ~/docker/zk/zklogdata:/datalog --name ydZk -d zookeeper:3.9.3
 ```
 
 
@@ -196,7 +196,7 @@ docker run --name ydMongo -p 27017:27017 -v ~/docker/mongo/:/data/db -d mongo
 ```
 
 ```
-docker exec -it ydMongo mongo admin
+docker exec -it ydMongo mongosh admin
 ```
 
 \# 创建管理员
@@ -228,7 +228,7 @@ docker run --name ydMongo -p 27017:27017 -v ~/docker/mongo:/data/db -d mongo --a
 ```
 
 ```
-docker exec -it ydMongo mongo admin
+docker exec -it ydMongo mongosh admin
 ```
 
 \# 权限认证# 返回 1 证明成功， 返回 0 证明失败
@@ -532,5 +532,4 @@ show tables;
 
 
 ```
-
 

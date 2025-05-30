@@ -64,7 +64,7 @@ public V put(K key, V value) {
 }
 ```
 
-####数组初始化
+#### 数组初始化
 
 在第一个元素插入 HashMap 的时候做一次数组的初始化，就是先确定初始的数组大小，并计算数组扩容的阈值。
 
@@ -83,7 +83,7 @@ private void inflateTable(int toSize) {
 
 这里有一个将数组大小保持为 2 的 n 次方的做法，Java7 和 Java8 的 HashMap 和 ConcurrentHashMap 都有相应的要求，只不过实现的代码稍微有些不同，后面再看到的时候就知道了。
 
-####计算具体数组位置
+#### 计算具体数组位置
 
 这个简单，我们自己也能 YY 一个：使用 key 的 hash 值对数组长度进行取模就可以了。
 
