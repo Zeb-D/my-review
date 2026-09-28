@@ -8,15 +8,8 @@
 
 ## 前言：这篇文章要聊什么
 
-> 本文是两篇公众号文章的拓展与延伸：
->
-> 1. 《K8s 里 GPU 是怎么被调度的：Device Plugin + Extended Resource》
-> 2. 《AI 时代的 GPU 资源调度：有没有类似 Kubernetes 的标准答案？》
->
-> 前一篇讲透了"一张 GPU 是怎么变成 Pod 里可用设备的"底层机制，后一篇讲透了 GPU 调度治理的全景。本文在这两篇的基础上，聚焦一个更工程化的问题：
->
 > **如何把 GPU 真正集成进 Kubernetes——从方案选型，到动手操作，到背后的原理，再到最常见的坑。**
->
+> 
 > 换句话说：**K8s 自己不认识 NVIDIA，也不认识昇腾。那一张 GPU 是怎么变成 Pod 里能用的设备的？集成的时候最容易踩哪些坑？**
 
 很多人以为"K8s 集成 GPU"就是"装个插件、Pod 里写 `nvidia.com/gpu: 1`"这么简单。但生产环境里最常见的三类事故，都源于对集成机制的误读：
@@ -65,13 +58,13 @@ flowchart TB
 
 这是第一个选择题，也是最常被问的"我应该装哪个"。
 
-| 维度 | 独立 Device Plugin | NVIDIA GPU Operator |
-| --- | --- | --- |
-| 管理内容 | 只管设备上报与分配 | 驱动 + 运行时 Toolkit + Device Plugin + DCGM + MIG Manager + 验证器，一整套 |
-| 驱动安装 | 需自己装（或节点预装） | Operator 自动下发/安装驱动 |
-| 异构感知 | 仅暴露 `nvidia.com/gpu` | 额外通过 GFD（GPU Feature Discovery）打产品/显存标签，支持 MIG 资源 |
-| 运维成本 | 低（一个 DaemonSet） | 高一些，但换来整栈自动化 |
-| 适用 | 已有驱动管理手段的团队 | 生产环境主流选择（省心、整栈一致） |
+| 维度   | 独立 Device Plugin     | NVIDIA GPU Operator                                             |
+| ---- | -------------------- | --------------------------------------------------------------- |
+| 管理内容 | 只管设备上报与分配            | 驱动 + 运行时 Toolkit + Device Plugin + DCGM + MIG Manager + 验证器，一整套 |
+| 驱动安装 | 需自己装（或节点预装）          | Operator 自动下发/安装驱动                                              |
+| 异构感知 | 仅暴露 `nvidia.com/gpu` | 额外通过 GFD（GPU Feature Discovery）打产品/显存标签，支持 MIG 资源               |
+| 运维成本 | 低（一个 DaemonSet）      | 高一些，但换来整栈自动化                                                    |
+| 适用   | 已有驱动管理手段的团队          | 生产环境主流选择（省心、整栈一致）                                               |
 
 > 一句话选型：**能接受让 Operator 管驱动，就上 GPU Operator；节点驱动已经有成熟渠道（如自研装机系统、裸金属交付），只想轻量接入，就装独立 Device Plugin。** 两者核心的 Device Plugin 机制完全一致。
 
@@ -79,42 +72,42 @@ flowchart TB
 
 注入设备的实现方式在演进，新装环境建议直接走 **CDI（Container Device Interface）**：
 
-| 方式 | 说明 |
-| --- | --- |
-| 传统 runtime（`nvidia` runtimeClass） | 通过 prestart OCI hook 在容器启动前注入设备与库 |
-| CDI（Container Device Interface） | 设备以"设备描述文件"形式声明，containerd 原生支持，不依赖特殊 runtimeClass |
+| 方式                                | 说明                                                 |
+| --------------------------------- | -------------------------------------------------- |
+| 传统 runtime（`nvidia` runtimeClass） | 通过 prestart OCI hook 在容器启动前注入设备与库                  |
+| CDI（Container Device Interface）   | 设备以"设备描述文件"形式声明，containerd 原生支持，不依赖特殊 runtimeClass |
 
 GPU Operator 新版本默认会配置 CDI（生成 `/etc/cdi/nvidia.yaml`），Pod 里写 `runtimeClassName: nvidia` 依然可用（向后兼容），也可以不指定 runtime、由 CDI 按需注入。理解这个差异，对排障很有帮助——下面 2.4 会展开原理。
 
 ### 1.4 共享切分层：独占 / MIG / 时间片 / HAMi
 
-| 方案 | 隔离性 | 粒度 | 适用 | 代价 |
-| --- | --- | --- | --- | --- |
-| 独占整卡 | 最好 | 整卡 | 大模型训练、高负载推理 | 小任务浪费显存 |
-| MIG（硬件切分） | 硬件级隔离 | 固定规格（1g.5gb 等） | 多租户推理 | 规格固定，动态调整需重配；需 Ampere+ |
-| 时间片共享 | 无显存隔离 | 整卡分时 | 轻量任务提利用率 | 一个任务 OOM 可能影响邻居 |
-| HAMi vGPU（软件切分） | 细粒度显存+算力 | 可定制 | 开发测试、中小模型推理 | 需评估稳定性与故障边界 |
+| 方案              | 隔离性      | 粒度             | 适用          | 代价                     |
+| --------------- | -------- | -------------- | ----------- | ---------------------- |
+| 独占整卡            | 最好       | 整卡             | 大模型训练、高负载推理 | 小任务浪费显存                |
+| MIG（硬件切分）       | 硬件级隔离    | 固定规格（1g.5gb 等） | 多租户推理       | 规格固定，动态调整需重配；需 Ampere+ |
+| 时间片共享           | 无显存隔离    | 整卡分时           | 轻量任务提利用率    | 一个任务 OOM 可能影响邻居        |
+| HAMi vGPU（软件切分） | 细粒度显存+算力 | 可定制            | 开发测试、中小模型推理 | 需评估稳定性与故障边界            |
 
 ### 1.5 选型决策矩阵（先看这张表，再决定往下读哪章）
 
-| 你的情况 | 建议路线 |
-| --- | --- |
-| 全新集群，想要整栈自动化 | GPU Operator（含 CDI + DCGM）→ 读第三章 3.3 |
-| 已有成熟驱动管理，只想轻量接入 | 独立 Device Plugin → 读第三章 3.2 |
-| 一张卡想跑多个小任务 | MIG 或 HAMi → 读第三章 3.7 |
-| 想彻底搞懂"为什么" | 第二章（原理）必须读 |
-| 已经在跑但问题不断 | 直接跳到第四章（排障） |
+| 你的情况            | 建议路线                                 |
+| --------------- | ------------------------------------ |
+| 全新集群，想要整栈自动化    | GPU Operator（含 CDI + DCGM）→ 读第三章 3.3 |
+| 已有成熟驱动管理，只想轻量接入 | 独立 Device Plugin → 读第三章 3.2          |
+| 一张卡想跑多个小任务      | MIG 或 HAMi → 读第三章 3.7                |
+| 想彻底搞懂"为什么"      | 第二章（原理）必须读                           |
+| 已经在跑但问题不断       | 直接跳到第四章（排障）                          |
 
 ------
 
 ## 二、原理：GPU 是怎么变成 Pod 里可用设备的
 
 > 这一章是整篇文章的"地基"，也是参考文章 1 的深化展开。K8s 的设备模型可以概括成三句话：
->
+> 
 > 1. **扩展资源（Extended Resource）**：把 GPU/NPU 注册成节点上可调度的「数量资源」，比如 `nvidia.com/gpu`；
 > 2. **Device Plugin**：厂商进程发现本机设备，向 kubelet 汇报容量，并在 Pod 分配时告诉 runtime 怎么把设备挂进容器；
 > 3. **调度器只认资源名和个数**：不关心卡型号细节，异构靠不同资源名分成不同池子。
->
+> 
 > 说白了：**K8s 提供插座标准，厂商插件负责把自家硬件插进去。**
 
 ### 2.1 为什么需要这套东西
@@ -153,12 +146,12 @@ kubectl describe node gpu-node-1 | grep -A5 Allocatable
 
 厂商插件一般以 **DaemonSet** 跑在每个 GPU 节点上，通过 gRPC 对接 kubelet。核心接口：
 
-| 接口 | 作用 |
-| --- | --- |
-| `GetDevicePluginOptions` | 查询插件能力（是否支持拓扑、是否返回 Annotation） |
-| `ListAndWatch` | 流式上报本机设备列表与健康状态（`Healthy` / `Unhealthy`） |
-| `Allocate` | Pod 需要设备时，返回 `device path / env / mounts`（以及可选 annotation） |
-| `GetPreferredAllocation`（可选） | 给出更优的设备组合偏好（如拓扑感知） |
+| 接口                           | 作用                                                         |
+| ---------------------------- | ---------------------------------------------------------- |
+| `GetDevicePluginOptions`     | 查询插件能力（是否支持拓扑、是否返回 Annotation）                             |
+| `ListAndWatch`               | 流式上报本机设备列表与健康状态（`Healthy` / `Unhealthy`）                   |
+| `Allocate`                   | Pod 需要设备时，返回 `device path / env / mounts`（以及可选 annotation） |
+| `GetPreferredAllocation`（可选） | 给出更优的设备组合偏好（如拓扑感知）                                         |
 
 协议细节：
 
@@ -203,14 +196,14 @@ sequenceDiagram
 
 容器对资源的隔离，最终落在 Linux 的 cgroup 上。以 cgroup v2 为例，控制器包括：
 
-| cgroup 控制器 | 管什么 | 和 GPU 的关系 |
-| --- | --- | --- |
-| `cpu` | CPU 时间片 | 管不到 GPU 的 SM（流处理器）算力 |
-| `memory` | 宿主内存（页缓存/RSS） | **管不到 GPU 显存（VRAM）** |
-| `io` | 块设备 IO | 无关 |
-| `pids` | 进程数 | 无关 |
-| `cpuset` | CPU/NUMA 亲和 | 只能影响"CPU 端"，管不到 GPU 侧的 NVLink/NUMA 拓扑 |
-| `devices`（v1）/ eBPF 设备控制器（v2） | 允许/拒绝访问设备节点 | **GPU 设备节点的"访问许可"由它管** |
+| cgroup 控制器                    | 管什么           | 和 GPU 的关系                             |
+| ----------------------------- | ------------- | ------------------------------------- |
+| `cpu`                         | CPU 时间片       | 管不到 GPU 的 SM（流处理器）算力                  |
+| `memory`                      | 宿主内存（页缓存/RSS） | **管不到 GPU 显存（VRAM）**                  |
+| `io`                          | 块设备 IO        | 无关                                    |
+| `pids`                        | 进程数           | 无关                                    |
+| `cpuset`                      | CPU/NUMA 亲和   | 只能影响"CPU 端"，管不到 GPU 侧的 NVLink/NUMA 拓扑 |
+| `devices`（v1）/ eBPF 设备控制器（v2） | 允许/拒绝访问设备节点   | **GPU 设备节点的"访问许可"由它管**                |
 
 关键在最后一行：**cgroup 对 GPU 的"管理"，仅限于 device 层——允许或拒绝容器访问 `/dev/nvidia*` 这些设备节点**。算力、显存这两个 GPU 真正的资源维度，cgroup 一概不碰。
 
@@ -227,12 +220,12 @@ sequenceDiagram
 
 这是理解 GPU 集成的第二个关键点。**宿主内存和 GPU 显存，走的是两套完全不同的记账与回收机制**：
 
-| | 宿主内存 | GPU 显存（VRAM） |
-| --- | --- | --- |
-| 记账方 | 内核（页表 + cgroup memory 控制器） | CUDA 驱动（设备内存分配器） |
-| 超限后果 | 内核 OOM killer 杀进程 → 容器 `OOMKilled` | CUDA 返回 `cudaErrorMemoryAllocation` → 应用报 `CUDA error: out of memory` |
-| 进程状态 | 被杀 | **通常还活着**，只是 CUDA 调用失败 |
-| 是否受 cgroup 限制 | 是（`memory.limit`） | **否** |
+|               | 宿主内存                               | GPU 显存（VRAM）                                                          |
+| ------------- | ---------------------------------- | --------------------------------------------------------------------- |
+| 记账方           | 内核（页表 + cgroup memory 控制器）         | CUDA 驱动（设备内存分配器）                                                      |
+| 超限后果          | 内核 OOM killer 杀进程 → 容器 `OOMKilled` | CUDA 返回 `cudaErrorMemoryAllocation` → 应用报 `CUDA error: out of memory` |
+| 进程状态          | 被杀                                 | **通常还活着**，只是 CUDA 调用失败                                                |
+| 是否受 cgroup 限制 | 是（`memory.limit`）                  | **否**                                                                 |
 
 排障时必须区分这两者：**`OOMKilled` = 宿主内存问题**（查 `memory.limit` 和 `dmesg` 里的 OOM killer）；**`CUDA error: out of memory` = 显存问题**（查 DCGM 的 `DCGM_FI_DEV_MEMORY_USED` 和卡的显存上限）。**把这两者混为一谈，是 GPU 排障最常见的误区之一。**
 
@@ -240,13 +233,13 @@ sequenceDiagram
 
 既然 cgroup 管不到显存和算力，那限制它们靠什么？答案是**分层各管一段**：
 
-| 想限制的维度 | 手段 | 隔离级别 |
-| --- | --- | --- |
-| GPU 设备访问 | device cgroup / eBPF（运行时放行） | 进程/容器 |
-| 显存（硬隔离） | **MIG**（硬件切分） | 硬件实例 |
-| 显存（软隔离） | HAMi 等 vGPU（CUDA 层拦截记账） | 进程/容器（无内核级强制） |
-| 算力（软限制） | CUDA MPS 的 compute quota、vGPU 算力比例 | 进程/容器（靠用户态调度） |
-| CPU / 宿主内存 | cgroup（常规手段） | 进程/容器 |
+| 想限制的维度     | 手段                                 | 隔离级别          |
+| ---------- | ---------------------------------- | ------------- |
+| GPU 设备访问   | device cgroup / eBPF（运行时放行）        | 进程/容器         |
+| 显存（硬隔离）    | **MIG**（硬件切分）                      | 硬件实例          |
+| 显存（软隔离）    | HAMi 等 vGPU（CUDA 层拦截记账）            | 进程/容器（无内核级强制） |
+| 算力（软限制）    | CUDA MPS 的 compute quota、vGPU 算力比例 | 进程/容器（靠用户态调度） |
+| CPU / 宿主内存 | cgroup（常规手段）                       | 进程/容器         |
 
 一句话：**CPU 和宿主内存由内核 cgroup 强制管；GPU 的算力与显存由 CUDA 驱动 + 硬件（MIG）/用户态库（vGPU）管，设备访问许可才归 device cgroup。** 这也是为什么共享 GPU 的"故障边界"（邻居把显存打爆会不会拖垮我）成为选型关键——因为没有任何内核级机制替你兜底，只有 MIG 这种硬件隔离才是"真隔离"。
 
@@ -302,16 +295,16 @@ helm upgrade -i nvdp nvdp/nvidia-device-plugin \
 
 GPU Operator 不是一个单体组件，而是一个用 Operator 模式编排的组件集合：
 
-| 子组件 | 职责 |
-| --- | --- |
-| Node Feature Discovery | 发现 GPU 节点并打标签 |
-| driver | 自动下发并安装 NVIDIA 驱动（kmod 方式） |
-| toolkit | 安装 nvidia-container-toolkit，配置 CDI / runtime |
-| Device Plugin | 暴露 `nvidia.com/gpu` 资源 |
-| GFD（GPU Feature Discovery） | 打产品/显存标签，暴露 MIG 扩展资源 |
-| DCGM Exporter | 暴露 GPU 观测指标 |
-| mig-manager | 管理 MIG 实例 |
-| validator | 安装后自检（验证器 Pod 跑 `nvidia-smi`） |
+| 子组件                        | 职责                                           |
+| -------------------------- | -------------------------------------------- |
+| Node Feature Discovery     | 发现 GPU 节点并打标签                                |
+| driver                     | 自动下发并安装 NVIDIA 驱动（kmod 方式）                   |
+| toolkit                    | 安装 nvidia-container-toolkit，配置 CDI / runtime |
+| Device Plugin              | 暴露 `nvidia.com/gpu` 资源                       |
+| GFD（GPU Feature Discovery） | 打产品/显存标签，暴露 MIG 扩展资源                         |
+| DCGM Exporter              | 暴露 GPU 观测指标                                  |
+| mig-manager                | 管理 MIG 实例                                    |
+| validator                  | 安装后自检（验证器 Pod 跑 `nvidia-smi`）                |
 
 ```bash
 helm repo add nvidia https://helm.ngc.nvidia.com/nvidia
@@ -360,12 +353,12 @@ kubectl logs gpu-test
 
 同一套机制，换厂商就是换"插件 + 资源名 + 驱动栈"：
 
-| 厂商 | 资源名示例 | 集成方式 |
-| --- | --- | --- |
-| NVIDIA | `nvidia.com/gpu` | k8s-device-plugin / GPU Operator |
+| 厂商     | 资源名示例                                         | 集成方式                                                    |
+| ------ | --------------------------------------------- | ------------------------------------------------------- |
+| NVIDIA | `nvidia.com/gpu`                              | k8s-device-plugin / GPU Operator                        |
 | 昇腾（华为） | `huawei.com/Ascend310`、`huawei.com/Ascend910` | Ascend Device Plugin + Ascend Docker Runtime / Operator |
-| AMD | `amd.com/gpu` | AMD 官方 K8s Device Plugin（基于 KFD） |
-| 寒武纪等 | 各自约定 | 各自插件 |
+| AMD    | `amd.com/gpu`                                 | AMD 官方 K8s Device Plugin（基于 KFD）                        |
+| 寒武纪等   | 各自约定                                          | 各自插件                                                    |
 
 上层工作负载（Deployment / Job / 各类 CRD）通常只是把对应的 `resources.limits` 写进去。**异构能力取决于集群是否装齐各厂商插件和驱动**，多个资源池并列存在、互不混用。
 
@@ -549,13 +542,13 @@ nvidia-smi
 
 **症状**：Pod 卡在 `Pending`。这是**最值得学会的一件事：读 `kubectl describe pod` 的 Events**——Events 里的关键词直接决定答案：
 
-| Events 里的典型报错 | 含义 | 解法 |
-| --- | --- | --- |
-| `0/N nodes are available: N node(s) had insufficient nvidia.com/gpu` | 没有可分配的空闲 GPU | 等队列/释放任务/加节点；检查调度层配额 |
-| `N node(s) didn't match Pod's node affinity/selector` | nodeSelector 没匹配上 | 看节点标签：`kubectl get nodes --show-labels \| grep nvidia` |
-| `N node(s) had untolerated taint` | 节点有污点、Pod 没容忍 | Pod 加 `tolerations`，或节点去掉污点 |
-| 提交时直接被 API 拒绝：`requests must not be specified for extended resources` 之类 | 扩展资源写在了 `requests` | 移到 `limits`（不是调度问题，是准入问题） |
-| 资源名拼写错误（提交时报 no such resource / 一直 Pending 且无 GPU 相关 Event） | `nvidia.com/gpu` 拼错、或节点根本没有这个资源 | 核对拼写；确认节点 `allocatable` 里有该资源 |
+| Events 里的典型报错                                                            | 含义                              | 解法                                                     |
+| ------------------------------------------------------------------------ | ------------------------------- | ------------------------------------------------------ |
+| `0/N nodes are available: N node(s) had insufficient nvidia.com/gpu`     | 没有可分配的空闲 GPU                    | 等队列/释放任务/加节点；检查调度层配额                                   |
+| `N node(s) didn't match Pod's node affinity/selector`                    | nodeSelector 没匹配上               | 看节点标签：`kubectl get nodes --show-labels \| grep nvidia` |
+| `N node(s) had untolerated taint`                                        | 节点有污点、Pod 没容忍                   | Pod 加 `tolerations`，或节点去掉污点                            |
+| 提交时直接被 API 拒绝：`requests must not be specified for extended resources` 之类 | 扩展资源写在了 `requests`              | 移到 `limits`（不是调度问题，是准入问题）                              |
+| 资源名拼写错误（提交时报 no such resource / 一直 Pending 且无 GPU 相关 Event）              | `nvidia.com/gpu` 拼错、或节点根本没有这个资源 | 核对拼写；确认节点 `allocatable` 里有该资源                          |
 
 **关键判断**：Event 里如果**没有** "insufficient GPU" 提示，而是 "didn't match selector" 或 "untolerated taint"，说明是**标签/污点问题，而不是没卡**——两种情况的解法完全不同，别在加卡上浪费时间。
 
@@ -617,15 +610,15 @@ export NCCL_IB_DISABLE=1              # 没有 IB 时显式关闭，避免误走
 
 ### 4.7 快速对照表（补充速查）
 
-| 现象 | 一句根因 | 一句话解法 |
-| --- | --- | --- |
-| `unknown runtime "nvidia"` | containerd 未注册 nvidia runtime | `nvidia-ctk runtime configure --runtime=containerd` + 重启 |
-| `OOMKilled` | **宿主内存**超限（cgroup memory 管得到） | 加大 `memory.limit`；查 `dmesg` OOM killer |
-| `CUDA error: out of memory` | **显存**超限（cgroup 管不到） | 查 DCGM 显存指标；换 MIG/降 batch size |
-| MIG 资源 `nvidia.com/mig-*` 找不到 | MIG 未启用 / GFD 未跑 / 卡不支持 | 启用 migManager；确认 Ampere+；GFD 暴露 |
-| 共享 GPU 下邻居被 OOM 拖垮 | 时间片/HAMi 无严格显存隔离 | 换 MIG 硬件隔离或收窄共享 |
-| `dmesg` 出现 XID 错误 | 驱动/硬件故障 | 查 XID 码对应 NVIDIA 文档；查驱动版本与散热 |
-| DataLoader/vLLM 报共享内存错误 | `/dev/shm` 只有 64MB | `emptyDir medium: Memory` 挂 `/dev/shm` |
+| 现象                            | 一句根因                          | 一句话解法                                                    |
+| ----------------------------- | ----------------------------- | -------------------------------------------------------- |
+| `unknown runtime "nvidia"`    | containerd 未注册 nvidia runtime | `nvidia-ctk runtime configure --runtime=containerd` + 重启 |
+| `OOMKilled`                   | **宿主内存**超限（cgroup memory 管得到） | 加大 `memory.limit`；查 `dmesg` OOM killer                   |
+| `CUDA error: out of memory`   | **显存**超限（cgroup 管不到）          | 查 DCGM 显存指标；换 MIG/降 batch size                           |
+| MIG 资源 `nvidia.com/mig-*` 找不到 | MIG 未启用 / GFD 未跑 / 卡不支持       | 启用 migManager；确认 Ampere+；GFD 暴露                          |
+| 共享 GPU 下邻居被 OOM 拖垮            | 时间片/HAMi 无严格显存隔离              | 换 MIG 硬件隔离或收窄共享                                          |
+| `dmesg` 出现 XID 错误             | 驱动/硬件故障                       | 查 XID 码对应 NVIDIA 文档；查驱动版本与散热                             |
+| DataLoader/vLLM 报共享内存错误       | `/dev/shm` 只有 64MB            | `emptyDir medium: Memory` 挂 `/dev/shm`                   |
 
 > **最隐蔽的坑**：很多人"容器里跑通了 `nvidia-smi`"就以为集成完成，但生产事故往往出在**验证用镜像和实际业务镜像不一致**（CUDA runtime 版本不同）。验证一定用"要发布的那张业务镜像 + 真实的模型前向反向"，而不是一张万能测试镜像。
 
@@ -653,11 +646,11 @@ Gang Scheduling 的要求是"**资源全部满足 → 整个作业一起启动�
 
 同样申请 `nvidia.com/gpu: 8`，落在这几种节点的性能差异可能是数量级：
 
-| 放置位置 | 通信路径 | 对训练的影响 |
-| --- | --- | --- |
-| 同一台 NVSwitch 8 卡服务器 | 全走 NVLink/NVSwitch，几乎无瓶颈 | 最佳 |
-| 跨 2 台 4 卡服务器 | 机内走 NVLink + 机间走网络 | 有明显通信开销 |
-| 散落在普通以太网节点 | 全走网络 | 可能成为瓶颈 |
+| 放置位置                | 通信路径                     | 对训练的影响  |
+| ------------------- | ------------------------ | ------- |
+| 同一台 NVSwitch 8 卡服务器 | 全走 NVLink/NVSwitch，几乎无瓶颈 | 最佳      |
+| 跨 2 台 4 卡服务器        | 机内走 NVLink + 机间走网络       | 有明显通信开销 |
+| 散落在普通以太网节点          | 全走网络                     | 可能成为瓶颈  |
 
 默认调度器只认"剩余数量 >= 8"，**根本不看卡型、NVLink 域、NUMA 亲和、InfiniBand**。异构感知（把不同卡型/拓扑变成调度条件）需要专门的调度策略。
 
@@ -712,12 +705,12 @@ spec:
 
 Kueue 的思路完全不同：它**不替换**默认调度器，而是在**工作负载启动之前**做"排队 + 配额判断 + 准入"。核心抽象：
 
-| 抽象 | 作用 | 类比 |
-| --- | --- | --- |
-| `LocalQueue` | 命名空间内提交任务的入口 | 项目的"提交窗口" |
-| `ClusterQueue` | 集群范围的资源池与配额 | 项目的"配额账本" |
-| `ResourceFlavor` | 一种资源类型（卡型/区域/节点池） | "A100 池"、"H100 池" |
-| `Cohort` | 一组 ClusterQueue，可按规定共享/借用 | "部门资源池" |
+| 抽象               | 作用                        | 类比                |
+| ---------------- | ------------------------- | ----------------- |
+| `LocalQueue`     | 命名空间内提交任务的入口              | 项目的"提交窗口"         |
+| `ClusterQueue`   | 集群范围的资源池与配额               | 项目的"配额账本"         |
+| `ResourceFlavor` | 一种资源类型（卡型/区域/节点池）         | "A100 池"、"H100 池" |
+| `Cohort`         | 一组 ClusterQueue，可按规定共享/借用 | "部门资源池"           |
 
 **准入流程**（这是理解 Kueue 的关键）：
 
@@ -762,24 +755,24 @@ spec:
 
 ### 5.4 三句话选型（综合参考文章 2）
 
-| 场景 | 推荐组合 | 理由 |
-| --- | --- | --- |
-| K8s 上的分布式训练 | Volcano + PyTorchJob | Gang/队列/抢占/拓扑都是训练刚需 |
-| K8s 原生多租户配额 | Kueue + 默认调度器 | 低侵入补排队与配额 |
-| 大型 HPC / 裸机训练 | Slurm + NCCL + InfiniBand | 成熟队列/拓扑/运维，云原生生态弱 |
-| 训练与推理并存（规模大） | **隔离资源池**：训练池 Volcano / 推理池 KServe+vLLM | 避免批作业抢占在线推理 |
+| 场景            | 推荐组合                                    | 理由                  |
+| ------------- | --------------------------------------- | ------------------- |
+| K8s 上的分布式训练   | Volcano + PyTorchJob                    | Gang/队列/抢占/拓扑都是训练刚需 |
+| K8s 原生多租户配额   | Kueue + 默认调度器                           | 低侵入补排队与配额           |
+| 大型 HPC / 裸机训练 | Slurm + NCCL + InfiniBand               | 成熟队列/拓扑/运维，云原生生态弱   |
+| 训练与推理并存（规模大）  | **隔离资源池**：训练池 Volcano / 推理池 KServe+vLLM | 避免批作业抢占在线推理         |
 
 ### 5.5 治理指标：怎么证明"物尽其用"
 
 集成了、调度了，还得能证明价值。GPU Operator 自带 DCGM Exporter，把指标暴露给 Prometheus。核心指标与运营含义：
 
-| 指标 | 含义 | 运营用途 |
-| --- | --- | --- |
-| `DCGM_FI_DEV_GPU_UTIL` | SM 利用率（算力真的用起来没） | 发现"占了卡但算力空转"的作业 |
-| `DCGM_FI_DEV_MEMORY_USED` | 显存使用量 | 显存碎片/超卖识别 |
-| `DCGM_FI_DEV_POWER_USAGE` / `TEMP` | 功耗 / 温度 | 散热与降频告警 |
-| `DCGM_FI_DEV_XID_ERRORS` | 驱动级错误 | 卡故障/驱动不匹配的第一信号 |
-| 按 namespace/owner 聚合的利用率与费用 | 谁用多少、值多少钱 | 配额计量 + 成本分摊 |
+| 指标                                 | 含义               | 运营用途            |
+| ---------------------------------- | ---------------- | --------------- |
+| `DCGM_FI_DEV_GPU_UTIL`             | SM 利用率（算力真的用起来没） | 发现"占了卡但算力空转"的作业 |
+| `DCGM_FI_DEV_MEMORY_USED`          | 显存使用量            | 显存碎片/超卖识别       |
+| `DCGM_FI_DEV_POWER_USAGE` / `TEMP` | 功耗 / 温度          | 散热与降频告警         |
+| `DCGM_FI_DEV_XID_ERRORS`           | 驱动级错误            | 卡故障/驱动不匹配的第一信号  |
+| 按 namespace/owner 聚合的利用率与费用        | 谁用多少、值多少钱        | 配额计量 + 成本分摊     |
 
 **治理运营上重点盯四条"空置/错配"规则**：
 

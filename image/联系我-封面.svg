@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a101f"/>
+      <stop offset="0.55" stop-color="#15233f"/>
+      <stop offset="1" stop-color="#1e2f55"/>
+    </linearGradient>
+    <linearGradient id="coreBar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5b96f7"/>
+      <stop offset="1" stop-color="#326ce5"/>
+    </linearGradient>
+    <linearGradient id="llmBar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b39dfb"/>
+      <stop offset="1" stop-color="#7c5cff"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="14" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <pattern id="dots" width="34" height="34" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.3" fill="#ffffff" opacity="0.05"/>
+    </pattern>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#dots)"/>
+
+  <!-- 顶部装饰细线 -->
+  <rect x="0" y="0" width="1200" height="6" fill="url(#coreBar)"/>
+  <rect x="0" y="0" width="460" height="6" fill="url(#llmBar)"/>
+
+  <!-- ===== 卡片 1：微信 ===== -->
+  <g filter="url(#shadow)">
+    <rect x="96" y="248" width="470" height="232" rx="18" fill="rgba(50,108,229,0.13)" stroke="#4a8af4" stroke-width="2"/>
+    <rect x="96" y="248" width="470" height="8" rx="4" fill="url(#coreBar)"/>
+
+    <!-- 微信图标 -->
+    <rect x="140" y="288" width="76" height="76" rx="18" fill="url(#coreBar)"/>
+    <ellipse cx="170" cy="318" rx="21" ry="17" fill="#ffffff"/>
+    <path d="M158 332 L154 342 L166 336 Z" fill="#ffffff"/>
+    <circle cx="163" cy="315" r="2.6" fill="#326ce5"/>
+    <circle cx="177" cy="315" r="2.6" fill="#326ce5"/>
+    <ellipse cx="192" cy="336" rx="16" ry="13" fill="#ffffff" opacity="0.85"/>
+    <path d="M202 346 L206 354 L196 350 Z" fill="#ffffff" opacity="0.85"/>
+    <circle cx="187" cy="334" r="2.1" fill="#326ce5"/>
+    <circle cx="198" cy="334" r="2.1" fill="#326ce5"/>
+
+    <!-- 文案：不出现「微信」字样 -->
+    <text x="238" y="320" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="22" fill="#8fa6cf" letter-spacing="1">WeChat</text>
+    <text x="238" y="350" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="16" fill="#8fa6cf" letter-spacing="1">添加请备注来意</text>
+    <text x="140" y="424" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="36" font-weight="700" fill="#e8f0ff" letter-spacing="2">chou_lucas</text>
+    <text x="140" y="458" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="16" fill="#8fa6cf">交流 AI 应用开发 · 架构设计 · 效率工具</text>
+  </g>
+
+  <!-- ===== 卡片 2：GitHub ===== -->
+  <g filter="url(#shadow)">
+    <rect x="634" y="248" width="470" height="232" rx="18" fill="rgba(124,92,255,0.14)" stroke="#b39dfb" stroke-width="2"/>
+    <rect x="634" y="248" width="470" height="8" rx="4" fill="url(#llmBar)"/>
+
+    <!-- GitHub / code 图标 -->
+    <rect x="678" y="288" width="76" height="76" rx="18" fill="url(#llmBar)"/>
+    <path d="M708 310 L694 326 L708 342" stroke="#ffffff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M726 310 L740 326 L726 342" stroke="#ffffff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="720" y1="306" x2="714" y2="346" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+
+    <!-- 文案 -->
+    <text x="776" y="320" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="22" fill="#b9a6f2" letter-spacing="1">GitHub · 开源</text>
+    <text x="776" y="350" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="16" fill="#8f7fd0" letter-spacing="1">代码 · 文章 · 项目</text>
+    <text x="678" y="424" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="26" font-weight="700" fill="#efe8ff" letter-spacing="0.5">https://github.com/Zeb-D</text>
+    <text x="678" y="458" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="16" fill="#b9a6f2">欢迎 Star · Fork · 提 Issue 交流</text>
+  </g>
+
+  <!-- ===== 底部标签 ===== -->
+  <g font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="19" fill="#c6d6f2">
+    <rect x="96" y="524" width="150" height="44" rx="22" fill="rgba(159,179,217,0.08)" stroke="#6479a6" stroke-width="1.5"/><text x="171" y="552" text-anchor="middle">AI 工程</text>
+    <rect x="262" y="524" width="150" height="44" rx="22" fill="rgba(159,179,217,0.08)" stroke="#6479a6" stroke-width="1.5"/><text x="337" y="552" text-anchor="middle">后端架构</text>
+    <rect x="428" y="524" width="150" height="44" rx="22" fill="rgba(159,179,217,0.08)" stroke="#6479a6" stroke-width="1.5"/><text x="503" y="552" text-anchor="middle">分布式</text>
+    <rect x="594" y="524" width="150" height="44" rx="22" fill="rgba(159,179,217,0.08)" stroke="#6479a6" stroke-width="1.5"/><text x="669" y="552" text-anchor="middle">性能优化</text>
+    <rect x="760" y="524" width="150" height="44" rx="22" fill="rgba(124,92,255,0.14)" stroke="#b39dfb" stroke-width="1.5"/><text x="835" y="552" text-anchor="middle" font-size="17" fill="#e9e1ff">开源共建</text>
+  </g>
+
+  <!-- 右下角水印 -->
+  <text x="1200" y="612" text-anchor="end" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="17" fill="#6479a6" letter-spacing="1">Zeb-D · my-review</text>
+</svg>
